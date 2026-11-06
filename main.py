@@ -353,6 +353,19 @@ if __name__ == "__main__":
                     f.write(__app_version__)
             except OSError:
                 pass
+        if getattr(args, "_after_update", False):
+            # right after an update, the previous version's WebView2 can still be shutting
+            # down; attaching to it leaves the new window blank, so wait until it lets go
+            # of its profile (Chromium keeps "lockfile" open exclusively while running)
+            import time
+            browser_lock = os.path.join(webview_storage, "EBWebView", "lockfile")
+            deadline = time.monotonic() + 30
+            while os.path.exists(browser_lock) and time.monotonic() < deadline:
+                try:
+                    with open(browser_lock, "a"):
+                        break
+                except OSError:
+                    time.sleep(0.5)
         # serve the interface from a fresh local port on every run: with a fixed port
         # (pywebview's default when not in private mode) WebView2 can keep showing cached
         # files from the previous version after an update
