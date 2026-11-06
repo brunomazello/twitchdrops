@@ -125,6 +125,10 @@
     animation: up .2s ease; max-width: 90vw; }
   .offline-banner { background: rgba(255,75,75,.12); color: var(--red); border: 1px solid rgba(255,75,75,.35); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
   .hint { font-size: 12.5px; color: var(--text-3); }
+  .alert { border-color: rgba(255,179,25,.45); background: linear-gradient(135deg, rgba(255,179,25,.12), var(--panel) 65%); }
+  .alert-title { font-weight: 800; color: var(--yellow); margin-bottom: 4px; }
+  .alert .item img { width: 34px; height: 45px; object-fit: cover; border-radius: 5px; flex: none; }
+  .alert .item a { text-decoration: none; }
   @keyframes pulse { 50% { opacity: .4; } }
   @keyframes up { from { opacity: 0; transform: translate(-50%, 8px); } }
 </style>
@@ -141,6 +145,13 @@
   <!-- HOME -->
   <section data-tab="home">
     <div class="status" id="status" style="margin-bottom:12px">Carregando…</div>
+
+    <div class="card alert hidden" id="alert" style="margin-bottom:12px">
+      <div class="alert-title">⚠ Conta não vinculada</div>
+      <div class="hint" style="margin-bottom:10px">Essas campanhas não vão ser mineradas até você vincular a conta do jogo. Dá para fazer pelo celular mesmo.</div>
+      <div class="list" id="alert-list"></div>
+      <button class="btn block" id="btn-relinked" style="margin-top:10px">Já vinculei — atualizar</button>
+    </div>
 
     <div class="card hero" id="hero">
       <div class="hero-bg" id="hero-bg"></div>
@@ -313,6 +324,13 @@
       $("#ends").textContent = p.ends;
     }
 
+    const alerts = S.alerts || [];
+    $("#alert").classList.toggle("hidden", !alerts.length);
+    $("#alert-list").innerHTML = alerts.map((a) => `
+      <div class="item"><img src="${esc(a.image)}" alt="">
+        <div class="grow"><div class="name">${esc(a.game)}</div><div class="sub">${esc(a.name)}</div></div>
+        <a class="btn primary sm" href="${esc(a.link_url)}" target="_blank" rel="noopener">Vincular</a></div>`).join("");
+
     $("#s-claimed").textContent = S.session_claimed || 0;
     $("#s-online").textContent = S.online;
 
@@ -405,6 +423,7 @@
   });
   $("#mode").addEventListener("change", (e) => act("priority_mode", e.target.value));
   $("#btn-apply").addEventListener("click", () => act("reload").then((ok) => ok && toast("Recarregando campanhas…")));
+  $("#btn-relinked").addEventListener("click", () => act("reload").then((ok) => ok && toast("Conferindo o vínculo…")));
   $("#btn-reload").addEventListener("click", () => act("reload").then((ok) => ok && toast("Atualizando…")));
 
   function tickSession() {

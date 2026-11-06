@@ -721,6 +721,8 @@ class InventoryOverview:
         self._drop_campaign: dict[str, str] = {}
         self._claimed_ids: set[str] = set()
         self.session_claimed: int = 0
+        # campaigns we already warned about (not linked) - one notification per campaign
+        self._link_notified: set[str] = set()
 
     @staticmethod
     def _status(campaign: DropsCampaign) -> tuple[str, str]:
@@ -790,6 +792,7 @@ class InventoryOverview:
 
     def refresh(self):
         self._manager.emit("inventory", self.snapshot(), key="inventory")
+        self.push_alerts()
 
     async def add_campaign(self, campaign: DropsCampaign) -> None:
         self._campaigns[campaign.id] = campaign
@@ -800,11 +803,60 @@ class InventoryOverview:
         self._manager.emit(
             "campaign", self._campaign_dict(campaign), key=f"campaign:{campaign.id}"
         )
+        if self._needs_link(campaign):
+            self.push_alerts()
+            if campaign.id not in self._link_notified:
+                self._link_notified.add(campaign.id)
+                self._manager.print(
+                    f"A campanha \"{campaign.name}\" de {campaign.game.name} está ativa, "
+                    "mas sua conta do jogo não está vinculada à Twitch - ela não será minerada."
+                )
+                self._manager.tray.notify(
+                    f"{campaign.game.name}: vincule sua conta para minerar \"{campaign.name}\".",
+                    "Campanha não vinculada",
+                )
+
+    def _needs_link(self, campaign: DropsCampaign) -> bool:
+        """
+        True for an active campaign we'd want to mine, that can't be mined
+        only because the game account isn't linked to Twitch.
+        """
+        if campaign.linked or campaign.has_badge_or_emote:
+            return False
+        if not campaign.active or campaign.finished or campaign.required_minutes <= 0:
+            return False
+        settings = self._manager._twitch.settings
+        game = campaign.game.name
+        if settings.priority_mode is PriorityMode.PRIORITY_ONLY:
+            return game in settings.priority
+        return game not in settings.exclude
+
+    def link_alerts(self) -> list[dict[str, Any]]:
+        priority = list(self._manager._twitch.settings.priority)
+        alerts = [
+            {
+                "id": c.id,
+                "game": c.game.name,
+                "name": c.name,
+                "image": str(c.image_url),
+                "link_url": c.link_url,
+                "ends": _fmt_time(c.ends_at),
+                "priority": priority.index(c.game.name) if c.game.name in priority else 999,
+            }
+            for c in self._campaigns.values()
+            if self._needs_link(c)
+        ]
+        alerts.sort(key=lambda a: (a["priority"], a["game"]))
+        return alerts
+
+    def push_alerts(self) -> None:
+        self._manager.emit("alerts", self.link_alerts(), key="alerts")
 
     def clear(self) -> None:
         self._campaigns.clear()
         self._drop_campaign.clear()
         self._manager.emit("inventory", [], key="inventory")
+        self.push_alerts()
 
     def update_drop(self, drop: TimedDrop) -> None:
         campaign_id = self._drop_campaign.get(drop.id)
@@ -1160,6 +1212,7 @@ class GUIManager:
             "log": self.output.snapshot(),
             "channels": self.channels.snapshot(),
             "inventory": self.inv.snapshot(),
+            "alerts": self.inv.link_alerts(),
             "settings": self.settings.snapshot(),
             "help": self.help.snapshot(),
             "i18n": _._translation.get("gui", {}),
@@ -1219,14 +1272,18 @@ class GUIManager:
             self.settings.set_proxy(args[0])
         elif name == "priority_add":
             self.settings.priority_add(args[0])
+            self.inv.push_alerts()
         elif name == "priority_move":
             self.settings.priority_move(int(args[0]), int(args[1]))
         elif name == "priority_delete":
             self.settings.priority_delete(int(args[0]))
+            self.inv.push_alerts()
         elif name == "exclude_add":
             self.settings.exclude_add(args[0])
+            self.inv.push_alerts()
         elif name == "exclude_delete":
             self.settings.exclude_delete(args[0])
+            self.inv.push_alerts()
         elif name == "reload":
             self._twitch.change_state(State.INVENTORY_FETCH)
         elif name == "invalidate":
@@ -1323,6 +1380,7 @@ class GUIManager:
             },
             "started_at": self._started_at,
             "session_claimed": self.inv.session_claimed,
+            "alerts": self.inv.link_alerts(),
         }
 
     # API used by the miner (same as the old Tk GUI)

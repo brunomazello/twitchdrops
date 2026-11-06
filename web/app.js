@@ -482,6 +482,32 @@
     $("#btn-invalidate").disabled = !S.help.invalidate_enabled;
   }
 
+  /* ---------- Unlinked campaigns ---------- */
+  function renderAlerts() {
+    const list = S.alerts || [];
+    $("#link-alert").classList.toggle("hidden", !list.length);
+    $("#link-alert-list").innerHTML = list.map((a) => `
+      <div class="link-row">
+        <img src="${esc(a.image)}" alt="" referrerpolicy="no-referrer">
+        <div class="grow">
+          <div class="lr-game">${esc(a.game)}</div>
+          <div class="lr-name">${esc(a.name)} · termina ${esc(a.ends)}</div>
+        </div>
+        <div class="lr-acts">
+          <button class="btn btn-primary btn-sm" data-link="${esc(a.link_url)}">Vincular conta ↗</button>
+          <button class="btn btn-ghost btn-sm" data-relinked="1" title="Busca as campanhas de novo">Já vinculei</button>
+        </div>
+      </div>`).join("");
+  }
+  $("#link-alert-list").addEventListener("click", (e) => {
+    const link = e.target.closest("[data-link]");
+    if (link) { call("open_url", link.dataset.link); return; }
+    if (e.target.closest("[data-relinked]")) {
+      call("reload");
+      toast("Atualizando", "Conferindo o vínculo e buscando as campanhas de novo.");
+    }
+  });
+
   /* ---------- Toasts ---------- */
   function toast(title, text) {
     const el = document.createElement("div");
@@ -503,6 +529,8 @@
     S.status = d.status; S.state = d.state; S.ws = d.ws; S.login = d.login;
     S.progress = d.progress; S.channels = d.channels; S.settings = d.settings; S.help = d.help;
     S.campaigns = new Map((d.inventory || []).map((c) => [c.id, c]));
+    S.alerts = d.alerts || [];
+    renderAlerts();
     $("#log").innerHTML = "";
     (d.log || []).forEach((l) => addLog(l, false));
     $("#log").scrollTop = $("#log").scrollHeight;
@@ -533,6 +561,7 @@
     },
     settings: (d) => { S.settings = d; renderSettings(); },
     help: (d) => { S.help = d; renderHelp(); },
+    alerts: (d) => { S.alerts = d; renderAlerts(); },
   };
 
   window.TDM = {
