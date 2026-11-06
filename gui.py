@@ -1458,7 +1458,7 @@ class GUIManager:
             "campaigns": [
                 {k: c[k] for k in (
                     "id", "name", "game", "image", "ends", "claimed", "total", "progress",
-                    "finished",
+                    "finished", "drops", "channels",
                 )}
                 for c in active
             ],

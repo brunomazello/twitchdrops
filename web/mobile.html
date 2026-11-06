@@ -108,6 +108,26 @@
   .mini { height: 5px; background: var(--panel-3); border-radius: 99px; overflow: hidden; margin-top: 5px; }
   .mini div { height: 100%; background: var(--green); }
 
+  .camp-item { cursor: pointer; flex-wrap: wrap; }
+  .camp-item .chev { width: 18px; height: 18px; fill: var(--text-3); flex: none; transition: transform .2s; }
+  .camp-item.open .chev { transform: rotate(180deg); }
+  .camp-drops { display: none; width: 100%; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .camp-item.open .camp-drops { display: block; }
+  .camp-ch { font-size: 12px; color: var(--text-3); margin-bottom: 8px; }
+  .dgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+  .dcell { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 8px; text-align: center; position: relative; }
+  .dcell img { width: 56px; height: 56px; object-fit: contain; border-radius: 6px; display: block; margin: 0 auto 6px; }
+  .dcell .dn { font-size: 11.5px; font-weight: 600; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .dcell .dt { font: 600 10.5px var(--mono); color: var(--text-3); margin-top: 4px; }
+  .dcell .dx { font-size: 10px; color: var(--text-3); margin-top: 2px; }
+  .dcell.claimed { opacity: .55; }
+  .dcell.claimed .dt { color: var(--green); }
+  .dcell.ready { border-color: var(--green); }
+  .dcell.ready .dt { color: var(--green); }
+  .dcell.progress { border-color: var(--accent); }
+  .dcell.progress .dt { color: var(--accent-2); }
+  .dcell.locked img { filter: grayscale(1); opacity: .6; }
+
   .log { font: 11.5px/1.55 var(--mono); color: var(--text-2); max-height: 260px; overflow-y: auto; }
   .log div { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,.03); word-break: break-word; }
   .log .t { color: var(--text-3); margin-right: 6px; }
@@ -261,6 +281,23 @@
   const STATE = { pickaxe: "Iniciando", active: "Minerando", idle: "Ocioso", maint: "Atualizando", error: "Erro" };
   let S = null;
   let editing = false;
+  const openCamps = new Set();
+  const DROP_LABEL = { claimed: "Resgatado", ready: "Pronto", progress: "", locked: "" };
+  function chList(list) {
+    if (!list || !list.length) return "todos";
+    return list.length <= 4 ? list.join(", ") : `${list.slice(0, 4).join(", ")} +${list.length - 4}`;
+  }
+  function dropCell(d) {
+    const b = (d.benefits || [])[0] || { name: "", image: "" };
+    const name = (d.benefits || []).map((x) => x.name).join(", ");
+    const mini = d.state === "progress" ? `<div class="mini"><div style="width:${pct(d.progress)}"></div></div>` : "";
+    return `<div class="dcell ${esc(d.state)}">
+      <img src="${esc(b.image)}" alt="" loading="lazy" referrerpolicy="no-referrer">
+      <div class="dn">${esc(name)}</div>
+      <div class="dt">${esc(DROP_LABEL[d.state] || d.text)}</div>${mini}
+      ${d.extra ? `<div class="dx">${esc(d.extra)}</div>` : ""}
+    </div>`;
+  }
 
   // manifest (keeps the key so the installed app opens straight in)
   const link = document.createElement("link");
@@ -361,11 +398,16 @@
 
     // campaigns
     $("#campaigns").innerHTML = (S.campaigns || []).map((c) => `
-      <div class="item camp-item">
-        <img src="${esc(c.image)}" alt="">
+      <div class="item camp-item ${openCamps.has(c.id) ? "open" : ""}" data-cid="${esc(c.id)}">
+        <img src="${esc(c.image)}" alt="" referrerpolicy="no-referrer">
         <div class="grow"><div class="name">${esc(c.game)}</div><div class="sub">${esc(c.name)}</div>
           <div class="mini"><div style="width:${pct(c.total ? c.claimed / c.total : 0)}"></div></div>
           <div class="sub">${c.claimed}/${c.total} drops · termina ${esc(c.ends)}</div></div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M7.4 8.6L12 13.2l4.6-4.6L18 10l-6 6-6-6z"/></svg>
+        <div class="camp-drops">
+          <div class="camp-ch">Canais: ${esc(chList(c.channels))}</div>
+          <div class="dgrid">${(c.drops || []).map(dropCell).join("")}</div>
+        </div>
       </div>`).join("") || '<div class="empty">Nenhuma campanha ativa para minerar.</div>';
 
     // priority (skip while typing to avoid wiping inputs/selection)
@@ -396,6 +438,13 @@
     if (it.dataset.iid === S.watching_iid) return toast("Já está assistindo esse canal");
     if (it.dataset.online !== "true") return toast("Esse canal está offline");
     act("switch_to", it.dataset.iid).then((ok) => ok && toast("Trocando de canal…"));
+  });
+  $("#campaigns").addEventListener("click", (e) => {
+    const item = e.target.closest(".camp-item");
+    if (!item) return;
+    const id = item.dataset.cid;
+    if (openCamps.has(id)) openCamps.delete(id); else openCamps.add(id);
+    item.classList.toggle("open", openCamps.has(id));
   });
   $("#priority").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-act]"); const it = e.target.closest(".item[data-i]");
