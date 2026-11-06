@@ -1,0 +1,53 @@
+TWITCH DROPS MINER
+==================
+
+Pega os drops da Twitch sozinho, sem precisar deixar o navegador aberto
+assistindo live. Não precisa instalar nada: é só abrir o programa.
+
+
+COMO COMEÇAR
+------------
+1. Coloque o TwitchDropsMiner.exe numa pasta só dele
+   (por exemplo: Documentos\TwitchDropsMiner).
+   Ele cria arquivos de configuração do lado dele.
+
+2. Dê dois cliques no TwitchDropsMiner.exe.
+
+   Se aparecer "O Windows protegeu o computador", clique em
+   "Mais informações" e depois em "Executar assim mesmo".
+   (Isso aparece com programas que não são de uma grande empresa.)
+
+3. Clique em "Entrar com a Twitch" e faça login na janela que abrir.
+
+4. Vincule a conta do jogo à Twitch: sem isso a Twitch não libera o drop.
+   O programa avisa no Painel quando uma campanha precisa de vínculo,
+   com um botão "Vincular conta". Basta fazer uma vez por jogo.
+
+5. Em Configurações, adicione os jogos que você quer em
+   "Jogos prioritários" e clique em "Recarregar agora".
+
+Pronto. Pode minimizar: ele fica perto do relógio e avisa
+quando resgatar um drop.
+
+
+ATUALIZAÇÕES
+------------
+O programa se atualiza sozinho quando sai uma versão nova
+(dá para desligar em Configurações > Atualizações).
+
+
+DICAS
+-----
+- Notificações não aparecem enquanto você joga em tela cheia?
+  É o "Não perturbe" do Windows. Para desligar: Configurações do Windows >
+  Sistema > Notificações > Ativar o "não perturbe" automaticamente >
+  desmarque "Ao jogar um jogo".
+
+- Dá para acompanhar pelo celular: Configurações > Celular.
+
+- Se o programa pedir para instalar o "Microsoft Edge WebView2", aceite:
+  é um componente gratuito da Microsoft que mostra a interface
+  (já vem no Windows 11).
+
+
+Baseado no Twitch Drops Miner de DevilXD (github.com/DevilXD/TwitchDropsMiner).

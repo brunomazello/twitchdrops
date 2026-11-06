@@ -507,6 +507,30 @@
     $("#btn-invalidate").disabled = !S.help.invalidate_enabled;
   }
 
+  /* ---------- Updates ---------- */
+  function renderUpdate() {
+    const u = S.update;
+    if (!u) return;
+    $("#upd-current").textContent = `v${u.current}`;
+    let status = u.status || (u.supported ? "Ainda não verificado." : "Atualização automática só no .exe.");
+    $("#upd-status").textContent = status;
+    const busy = u.state === "downloading" || u.state === "restarting";
+    $("#upd-bar").classList.toggle("hidden", u.state !== "downloading");
+    $("#upd-bar-fill").style.width = pct(u.progress);
+    $("#btn-upd-apply").classList.toggle("hidden", !u.available || busy || !u.supported);
+    $("#btn-upd-check").disabled = u.state === "checking" || busy;
+    const banner = $("#update-banner");
+    banner.classList.toggle("hidden", !(u.available || busy));
+    $("#update-title").textContent = busy
+      ? (u.state === "restarting" ? `Reiniciando na versão ${u.latest}…` : `Baixando a versão ${u.latest}… ${pct(u.progress)}`)
+      : `Nova versão ${u.latest} disponível`;
+    $("#btn-update-banner").classList.toggle("hidden", busy || !u.supported);
+  }
+  $("#btn-upd-check").addEventListener("click", () => call("update_check"));
+  $("#btn-upd-apply").addEventListener("click", () => call("update_apply"));
+  $("#btn-update-banner").addEventListener("click", () => call("update_apply"));
+  $("#btn-upd-page").addEventListener("click", () => { if (S.update) call("open_url", S.update.page); });
+
   /* ---------- Unlinked campaigns ---------- */
   function renderAlerts() {
     const list = S.alerts || [];
@@ -557,6 +581,7 @@
     S.campaigns = new Map((d.inventory || []).map((c) => [c.id, c]));
     S.alerts = d.alerts || [];
     renderAlerts();
+    S.update = d.update; renderUpdate();
     $("#log").innerHTML = "";
     (d.log || []).forEach((l) => addLog(l, false));
     $("#log").scrollTop = $("#log").scrollHeight;
@@ -586,6 +611,7 @@
     settings: (d) => { S.settings = d; renderSettings(); },
     help: (d) => { S.help = d; renderHelp(); },
     alerts: (d) => { S.alerts = d; renderAlerts(); },
+    update: (d) => { S.update = d; renderUpdate(); },
     session: (d) => { sessionClaimed = d.claimed || 0; renderClaimed(); },
   };
 

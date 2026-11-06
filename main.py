@@ -112,6 +112,9 @@ if __name__ == "__main__":
     parser.add_argument("--tray", action="store_true")
     parser.add_argument("--log", action="store_true")
     parser.add_argument("--dump", action="store_true")
+    # set by the self-updater when it restarts the app on a new version
+    parser.add_argument("--after-update", dest="_after_update", action="store_true",
+                        help=argparse.SUPPRESS)
     # undocumented debug args
     parser.add_argument(
         "--debug-ws", dest="_debug_ws", action="store_true", help=argparse.SUPPRESS
@@ -224,6 +227,43 @@ if __name__ == "__main__":
         loop.call_soon_threadsafe(client.gui.close)
         return False
 
+    def webview2_installed() -> bool:
+        """The Edge WebView2 runtime renders the interface (built into Windows 11)."""
+        if sys.platform != "win32":
+            return True
+        import winreg
+        client = r"Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+        locations = (
+            (winreg.HKEY_LOCAL_MACHINE, rf"SOFTWARE\WOW6432Node\{client}"),
+            (winreg.HKEY_LOCAL_MACHINE, rf"SOFTWARE\{client}"),
+            (winreg.HKEY_CURRENT_USER, rf"Software\{client}"),
+        )
+        for hive, path in locations:
+            try:
+                with winreg.OpenKey(hive, path) as key:
+                    version, _ = winreg.QueryValueEx(key, "pv")
+                    if version and version != "0.0.0.0":
+                        return True
+            except OSError:
+                continue
+        return False
+
+    def ask_install_webview2() -> None:
+        import ctypes
+        import webbrowser
+        MB_YESNO, MB_ICONWARNING, IDYES = 0x04, 0x30, 6
+        answer = ctypes.windll.user32.MessageBoxW(
+            None,
+            "Falta um componente gratuito da Microsoft para mostrar a interface do "
+            "Twitch Drops Miner (Microsoft Edge WebView2).\n\n"
+            "Ele já vem no Windows 11, mas alguns Windows 10 não têm.\n\n"
+            "Quer baixar agora? Depois de instalar, abra o programa de novo.",
+            "Twitch Drops Miner",
+            MB_YESNO | MB_ICONWARNING,
+        )
+        if answer == IDYES:
+            webbrowser.open("https://go.microsoft.com/fwlink/p/?LinkId=2124703")
+
     def on_shown():
         set_title_bar_dark(settings.dark_mode)
 
@@ -236,10 +276,31 @@ if __name__ == "__main__":
 
     try:
         # use lock_file to check if we're not already running
+        from updater import cleanup_old_files, wait_for_lock
         success, file = lock_file(LOCK_PATH)
+        if not success and getattr(args, "_after_update", False):
+            # right after an update, the previous version may still be saving and closing
+            file.close()
+
+            def try_lock() -> bool:
+                global file
+                try:
+                    ok, file = lock_file(LOCK_PATH)
+                except OSError:
+                    return False
+                if not ok:
+                    file.close()
+                return ok
+
+            success = wait_for_lock(try_lock)
         if not success:
             # already running - exit
             sys.exit(3)
+        cleanup_old_files()
+
+        if not webview2_installed():
+            ask_install_webview2()
+            sys.exit(5)
 
         start_hidden = bool(settings.tray) and sys.platform != "darwin"
         window = webview.create_window(

@@ -12,7 +12,7 @@ from typing import Any, Dict, Literal, NewType, TYPE_CHECKING
 
 from yarl import URL
 
-from version import __version__
+from version import __version__, __app_version__
 
 if TYPE_CHECKING:
     from collections import abc  # noqa
@@ -129,7 +129,7 @@ PING_TIMEOUT = timedelta(seconds=10)
 ONLINE_DELAY = timedelta(seconds=120)
 WATCH_INTERVAL = timedelta(seconds=20)
 # Strings
-WINDOW_TITLE = f"Twitch Drops Miner v{__version__} (by DevilXD)"
+WINDOW_TITLE = f"Twitch Drops Miner v{__app_version__}"
 # Logging
 LOGGING_LEVELS = {
     0: logging.ERROR,

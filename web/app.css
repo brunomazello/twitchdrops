@@ -600,3 +600,12 @@ b { font-weight: 600; }
 
 .remote { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
 .remote-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+/* ===== Updates ===== */
+.update-banner { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; border-color: var(--accent-line); background: linear-gradient(120deg, rgba(145, 70, 255, .18), var(--panel) 60%); }
+.update-banner .grow { flex: 1; min-width: 0; }
+.update-title { font-weight: 700; font-size: 15px; color: var(--accent-2); }
+.purple-icon { background: var(--accent-soft) !important; color: var(--accent-2) !important; }
+.tag-mono.big { font-size: 12px; padding: 3px 8px; color: var(--text); }
+.upd-bar { height: 6px; background: var(--bg); border: 1px solid var(--border); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+.upd-bar div { height: 100%; width: 0; background: var(--accent); transition: width .3s; }

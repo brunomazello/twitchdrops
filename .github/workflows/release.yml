@@ -1,0 +1,72 @@
+# Publishes a new version: push a tag like "v1.0.1" and this builds the Windows .exe
+# and attaches it to a GitHub Release. Installed copies of the app check the latest
+# release and update themselves.
+#
+#   git tag v1.0.1
+#   git push origin v1.0.1
+#
+# (or run release.bat, which does both)
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Set the app version from the tag
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v", "V")
+          (Get-Content version.py) -replace '^__app_version__ = .*', "__app_version__ = `"$version`"" | Set-Content version.py -Encoding utf8
+          $parts = ($version -split '[^0-9]+' | Where-Object { $_ -ne '' } | Select-Object -First 4)
+          while ($parts.Count -lt 4) { $parts += '0' }
+          $tuple = ($parts -join ', ')
+          (Get-Content version_info.txt) `
+            -replace 'filevers=\([^)]*\)', "filevers=($tuple)" `
+            -replace 'prodvers=\([^)]*\)', "prodvers=($tuple)" `
+            -replace "StringStruct\('FileVersion', '[^']*'\)", "StringStruct('FileVersion', '$version')" `
+            -replace "StringStruct\('ProductVersion', '[^']*'\)", "StringStruct('ProductVersion', '$version')" `
+            | Set-Content version_info.txt -Encoding utf8
+          Get-Content version.py
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build the .exe
+        run: pyinstaller build.spec --noconfirm
+
+      - name: Prepare release files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release | Out-Null
+          Copy-Item "dist/Twitch Drops Miner (by DevilXD).exe" "release/TwitchDropsMiner.exe"
+          New-Item -ItemType Directory -Force "pack/Twitch Drops Miner" | Out-Null
+          Copy-Item "release/TwitchDropsMiner.exe" "pack/Twitch Drops Miner/TwitchDropsMiner.exe"
+          Copy-Item "LEIA-ME.txt" "pack/Twitch Drops Miner/LEIA-ME.txt"
+          Compress-Archive -Path "pack/Twitch Drops Miner" -DestinationPath "release/TwitchDropsMiner.zip"
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/TwitchDropsMiner.exe
+            release/TwitchDropsMiner.zip
+          generate_release_notes: true

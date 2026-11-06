@@ -45,6 +45,7 @@ if sys.platform == "win32":
 
 from translate import _
 from remote import MobileServer, qr_svg
+from updater import Updater
 from exceptions import MinerException, ExitRequest
 from utils import resource_path, webopen, task_wrapper, Game, _T
 from constants import (
@@ -179,6 +180,12 @@ class JsApi:
 
     def mobile_new_token(self) -> None:
         self._run("mobile_new_token")
+
+    def update_check(self) -> None:
+        self._run("update_check")
+
+    def update_apply(self) -> None:
+        self._run("update_apply")
 
     def tailscale(self, action: str) -> None:
         self._run("tailscale", action)
@@ -615,6 +622,7 @@ class TrayIcon:
         }
         self._icon_state: str = "pickaxe"
         self._drop: TimedDrop | None = None
+        self.hidden: bool = bool(manager._twitch.settings.tray)
 
     def _shorten(self, text: str, by_len: int, min_len: int) -> str:
         if (text_len := len(text)) <= min_len + 3 or by_len <= 0:
@@ -678,10 +686,12 @@ class TrayIcon:
         if sys.platform == "darwin":
             return
         self.start()
+        self.hidden = True
         self._manager.window_call("hide")
 
     def restore(self):
         # show + restore must run in order (the window may come back minimized otherwise)
+        self.hidden = False
         self._manager.window_call("show", "restore")
 
     def notify(
@@ -880,7 +890,7 @@ class SettingsPanel:
     AUTOSTART_KEY: str = "HKCU/Software/Microsoft/Windows/CurrentVersion/Run"
     BOOL_SETTINGS = (
         "dark_mode", "tray_notifications", "enable_badges_emotes", "available_drops_check",
-        "minimize_to_tray",
+        "minimize_to_tray", "auto_update",
     )
 
     def __init__(self, manager: GUIManager):
@@ -916,6 +926,7 @@ class SettingsPanel:
             "enable_badges_emotes": bool(s.enable_badges_emotes),
             "available_drops_check": bool(s.available_drops_check),
             "minimize_to_tray": bool(s.minimize_to_tray),
+            "auto_update": bool(s.auto_update),
             "priority_mode": s.priority_mode.name,
             "priority_modes": [
                 {"value": mode.name, "label": label}
@@ -1178,6 +1189,13 @@ class GUIManager:
         self.settings = SettingsPanel(self)
         self.help = HelpTab(self)
         self.mobile = MobileServer(twitch.settings, self.mobile_state, self.mobile_action)
+        self.updater = Updater(
+            twitch.settings,
+            on_change=lambda: self.emit("update", self.updater.snapshot(), key="update"),
+            on_restart=self.close,
+            notify=lambda message, title: self.tray.notify(message, title),
+            is_hidden=lambda: self.tray.hidden,
+        )
         self._mobile_qr: tuple[str, str] | None = None
         self._remote_qr: tuple[str, str] | None = None
         self._ts_task: asyncio.Task[None] | None = None
@@ -1224,6 +1242,7 @@ class GUIManager:
             "alerts": self.inv.link_alerts(),
             "settings": self.settings.snapshot(),
             "help": self.help.snapshot(),
+            "update": self.updater.snapshot(),
             "i18n": _._translation.get("gui", {}),
         }
 
@@ -1308,6 +1327,10 @@ class GUIManager:
             self.help.invalidate_token()
         elif name == "minimize_to_tray":
             self.tray.minimize()
+        elif name == "update_check":
+            asyncio.ensure_future(self.updater.check())
+        elif name == "update_apply":
+            asyncio.ensure_future(self.updater.apply())
         elif name == "tailscale":
             self.tailscale_action(str(args[0]) if args else "refresh")
         elif name == "mobile_new_token":
@@ -1482,8 +1505,10 @@ class GUIManager:
             self._flush_task = asyncio.create_task(self._flush_loop())
             if self._twitch.settings.mobile_access:
                 self.mobile_apply()
+            self.updater.start()
 
     def stop(self):
+        self.updater.stop()
         if self.mobile.running:
             asyncio.ensure_future(self.mobile.stop())
         self.progress.stop_timer()

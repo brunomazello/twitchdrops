@@ -27,16 +27,17 @@ class SettingsFile(TypedDict):
     mobile_token: str
     mobile_port: int
     minimize_to_tray: bool
+    auto_update: bool
 
 
 default_settings: SettingsFile = {
     "proxy": URL(),
     "priority": [],
     "exclude": set(),
-    "dark_mode": False,
+    "dark_mode": True,
     "autostart_tray": False,
     "connection_quality": 1,
-    "language": DEFAULT_LANG,
+    "language": "Português",
     "tray_notifications": True,
     "enable_badges_emotes": False,
     "available_drops_check": False,
@@ -45,6 +46,7 @@ default_settings: SettingsFile = {
     "mobile_token": "",
     "mobile_port": 8642,
     "minimize_to_tray": True,
+    "auto_update": True,
 }
 
 

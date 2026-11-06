@@ -106,6 +106,18 @@
           </div>
         </div>
 
+        <!-- Update available -->
+        <div class="card update-banner hidden" id="update-banner">
+          <div class="link-alert-icon purple-icon">
+            <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>
+          </div>
+          <div class="grow">
+            <div class="update-title" id="update-title">Nova versão disponível</div>
+            <div class="link-alert-desc" id="update-desc">Atualiza em segundos, sem perder login nem configurações.</div>
+          </div>
+          <button class="btn btn-primary" id="btn-update-banner">Atualizar agora</button>
+        </div>
+
         <!-- Unlinked campaigns alert -->
         <div class="card link-alert hidden" id="link-alert">
           <div class="link-alert-head">
@@ -403,6 +415,24 @@
               <button class="btn btn-primary" id="btn-exclude-add">Adicionar</button>
             </div>
             <ul class="list" id="exclude-list"></ul>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Atualizações</div>
+            <div class="setting">
+              <div><div class="setting-name">Versão instalada</div><div class="setting-desc" id="upd-status">—</div></div>
+              <span class="tag-mono big" id="upd-current">v1.0.0</span>
+            </div>
+            <div class="setting">
+              <div><div class="setting-name">Atualizar automaticamente</div><div class="setting-desc">Baixa e instala versões novas sozinho (reabre em segundos)</div></div>
+              <label class="switch"><input type="checkbox" data-setting="auto_update"><span></span></label>
+            </div>
+            <div class="upd-bar hidden" id="upd-bar"><div id="upd-bar-fill"></div></div>
+            <div class="row-gap" style="margin-top:10px">
+              <button class="btn btn-ghost btn-sm" id="btn-upd-check">Procurar agora</button>
+              <button class="btn btn-primary btn-sm hidden" id="btn-upd-apply">Atualizar agora</button>
+              <button class="btn btn-ghost btn-sm" id="btn-upd-page">Ver versões ↗</button>
+            </div>
           </div>
 
           <div class="card">
