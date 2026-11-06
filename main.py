@@ -227,6 +227,13 @@ if __name__ == "__main__":
     def on_shown():
         set_title_bar_dark(settings.dark_mode)
 
+    def on_minimized():
+        # minimize button: hide into the system tray instead of the taskbar (if enabled)
+        if sys.platform == "darwin" or not _client_ref or not settings.minimize_to_tray:
+            return
+        client = _client_ref[0]
+        client.gui._loop.call_soon_threadsafe(client.gui.tray.minimize)
+
     try:
         # use lock_file to check if we're not already running
         success, file = lock_file(LOCK_PATH)
@@ -248,6 +255,7 @@ if __name__ == "__main__":
         )
         window.events.closing += on_closing
         window.events.shown += on_shown
+        window.events.minimized += on_minimized
         # persistent WebView2 data folder (a temporary one can get cleaned up mid-run)
         webview_storage = os.path.join(
             os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"),

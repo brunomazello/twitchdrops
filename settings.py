@@ -26,6 +26,7 @@ class SettingsFile(TypedDict):
     mobile_access: bool
     mobile_token: str
     mobile_port: int
+    minimize_to_tray: bool
 
 
 default_settings: SettingsFile = {
@@ -43,6 +44,7 @@ default_settings: SettingsFile = {
     "mobile_access": False,
     "mobile_token": "",
     "mobile_port": 8642,
+    "minimize_to_tray": True,
 }
 
 

@@ -681,8 +681,8 @@ class TrayIcon:
         self._manager.window_call("hide")
 
     def restore(self):
-        self._manager.window_call("show")
-        self._manager.window_call("restore")
+        # show + restore must run in order (the window may come back minimized otherwise)
+        self._manager.window_call("show", "restore")
 
     def notify(
         self, message: str, title: str | None = None, duration: float = 10
@@ -880,6 +880,7 @@ class SettingsPanel:
     AUTOSTART_KEY: str = "HKCU/Software/Microsoft/Windows/CurrentVersion/Run"
     BOOL_SETTINGS = (
         "dark_mode", "tray_notifications", "enable_badges_emotes", "available_drops_check",
+        "minimize_to_tray",
     )
 
     def __init__(self, manager: GUIManager):
@@ -914,6 +915,7 @@ class SettingsPanel:
             "dark_mode": bool(s.dark_mode),
             "enable_badges_emotes": bool(s.enable_badges_emotes),
             "available_drops_check": bool(s.available_drops_check),
+            "minimize_to_tray": bool(s.minimize_to_tray),
             "priority_mode": s.priority_mode.name,
             "priority_modes": [
                 {"value": mode.name, "label": label}
@@ -1241,11 +1243,20 @@ class GUIManager:
         except Exception:
             logger.debug("Failed to push GUI update", exc_info=True)
 
-    def window_call(self, method: str, *args: Any) -> None:
-        if self._window is None:
+    def window_call(self, *methods: str) -> None:
+        """Calls window methods (no arguments) one after another, off the event loop."""
+        window = self._window
+        if window is None:
             return
-        func = getattr(self._window, method)
-        self._loop.run_in_executor(None, lambda: func(*args))
+
+        def run():
+            for method in methods:
+                try:
+                    getattr(window, method)()
+                except Exception:
+                    logger.debug(f"Window call failed: {method}", exc_info=True)
+
+        self._loop.run_in_executor(None, run)
 
     # JS -> Python
     def handle_js(self, name: str, args: tuple[Any, ...]) -> None:
