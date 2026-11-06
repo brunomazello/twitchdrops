@@ -294,7 +294,16 @@ if __name__ == "__main__":
 
             success = wait_for_lock(try_lock)
         if not success:
-            # already running - exit
+            # already running: ask that copy to show its window, then exit
+            try:
+                from constants import WAKE_PATH
+                WAKE_PATH.touch()
+                if sys.platform == "win32":
+                    import ctypes
+                    # we hold the user's click, so let the running copy take the foreground
+                    ctypes.windll.user32.AllowSetForegroundWindow(-1)  # ASFW_ANY
+            except Exception:
+                pass
             sys.exit(3)
         cleanup_old_files()
 

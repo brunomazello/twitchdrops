@@ -103,6 +103,8 @@ LANG_PATH = _resource_path("lang")
 LOG_PATH = Path(WORKING_DIR, "log.txt")
 DUMP_PATH = Path(WORKING_DIR, "dump.dat")
 LOCK_PATH = Path(WORKING_DIR, "lock.file")
+# created by a second launch to ask the running instance to show its window
+WAKE_PATH = Path(WORKING_DIR, "wake.flag")
 CACHE_PATH = Path(WORKING_DIR, "cache")
 CACHE_DB = Path(CACHE_PATH, "mapping.json")
 COOKIES_PATH = Path(WORKING_DIR, "cookies.jar")

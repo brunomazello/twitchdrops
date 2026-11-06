@@ -16,6 +16,7 @@ __pycache__
 log.txt
 /dump.dat
 /lock.file
+/wake.flag
 settings.json
 /lang/English.json
 # AppImage

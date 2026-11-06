@@ -50,6 +50,7 @@ from exceptions import MinerException, ExitRequest
 from utils import resource_path, webopen, task_wrapper, Game, _T
 from constants import (
     SELF_PATH,
+    WAKE_PATH,
     IS_PACKAGED,
     SCRIPTS_PATH,
     WINDOW_TITLE,
@@ -689,10 +690,13 @@ class TrayIcon:
         self.hidden = True
         self._manager.window_call("hide")
 
-    def restore(self):
+    def restore(self, *, focus: bool = False):
         # show + restore must run in order (the window may come back minimized otherwise)
         self.hidden = False
-        self._manager.window_call("show", "restore")
+        if focus:
+            self._manager.bring_to_front()
+        else:
+            self._manager.window_call("show", "restore")
 
     def notify(
         self, message: str, title: str | None = None, duration: float = 10
@@ -1277,6 +1281,36 @@ class GUIManager:
 
         self._loop.run_in_executor(None, run)
 
+    def bring_to_front(self) -> None:
+        """Shows the window above everything else (used when the app is launched again)."""
+        window = self._window
+        if window is None:
+            return
+
+        def run():
+            try:
+                window.show()
+                window.restore()
+                # briefly "always on top" pulls the window in front of other apps
+                window.on_top = True
+                window.on_top = False
+            except Exception:
+                logger.debug("Couldn't bring the window to front", exc_info=True)
+
+        self._loop.run_in_executor(None, run)
+
+    async def _wake_loop(self) -> None:
+        # a second launch of the app drops a flag file instead of opening another copy
+        WAKE_PATH.unlink(missing_ok=True)
+        while True:
+            await asyncio.sleep(1)
+            if WAKE_PATH.exists():
+                try:
+                    WAKE_PATH.unlink()
+                except OSError:
+                    pass
+                self.tray.restore(focus=True)
+
     # JS -> Python
     def handle_js(self, name: str, args: tuple[Any, ...]) -> None:
         try:
@@ -1503,12 +1537,16 @@ class GUIManager:
     def start(self):
         if self._flush_task is None:
             self._flush_task = asyncio.create_task(self._flush_loop())
+            self._wake_task = asyncio.create_task(self._wake_loop())
             if self._twitch.settings.mobile_access:
                 self.mobile_apply()
             self.updater.start()
 
     def stop(self):
         self.updater.stop()
+        if getattr(self, "_wake_task", None) is not None:
+            self._wake_task.cancel()
+            self._wake_task = None
         if self.mobile.running:
             asyncio.ensure_future(self.mobile.stop())
         self.progress.stop_timer()

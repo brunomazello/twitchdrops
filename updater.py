@@ -10,6 +10,7 @@ and attaches it to the release (see .github/workflows/release.yml).
 """
 from __future__ import annotations
 
+import os
 import re
 import sys
 import asyncio
@@ -229,8 +230,13 @@ class Updater:
             flags = 0
             if sys.platform == "win32":
                 flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+            # start as an independent instance: without this, PyInstaller hands the new
+            # process our own unpacked temp folder, which then can't be cleaned up
+            env = dict(os.environ, PYINSTALLER_RESET_ENVIRONMENT="1")
             try:
-                subprocess.Popen(args, cwd=str(exe.parent), creationflags=flags, close_fds=True)
+                subprocess.Popen(
+                    args, cwd=str(exe.parent), creationflags=flags, close_fds=True, env=env
+                )
             except OSError as exc:
                 logger.error(f"Couldn't start the updated version: {exc}")
                 self._set("error", "Atualizado, mas não foi possível reabrir. Abra o programa de novo.")
