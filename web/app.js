@@ -233,7 +233,7 @@
     const msg = (m ? m[2] : line).replace(/^(INFO|DEBUG|CALL|WARNING):\s*/, "").trim();
     if (!msg) return;
     let kind = "info", label = "INFO";
-    if (/claim|resgat/i.test(msg)) { kind = "claim"; label = "RESGATE"; }
+    if (/claim|resgat|colet/i.test(msg)) { kind = "claim"; label = "RESGATE"; }
     else if (/error|erro|fatal|traceback|exception/i.test(msg)) { kind = "err"; label = "ERRO"; }
     else if (/watching|assistindo|switch|troc|offline|online/i.test(msg)) { kind = "switch"; label = "CANAL"; }
     else if (/drop|campa|progress|minut/i.test(msg)) { kind = "drop"; label = "DROP"; }

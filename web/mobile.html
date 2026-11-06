@@ -347,7 +347,7 @@
     log.innerHTML = (S.log || []).slice().reverse().map((l) => {
       const m = /^(\d{1,2}:\d{2}:\d{2})\s{2}([\s\S]*)$/.exec(l);
       const t = m ? m[1] : "", msg = (m ? m[2] : l).replace(/^(INFO|DEBUG|CALL|WARNING):\s*/, "");
-      const cls = /claim|resgat/i.test(msg) ? "c" : "";
+      const cls = /claim|resgat|colet/i.test(msg) ? "c" : "";
       return `<div class="${cls}"><span class="t">${esc(t)}</span>${esc(msg)}</div>`;
     }).join("");
 
