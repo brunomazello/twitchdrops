@@ -20,6 +20,7 @@
     help: { invalidate_enabled: false },
     filters: { not_linked: false, upcoming: true, expired: false, excluded: false, finished: false },
     filtersTouched: false,
+    campView: "all",
     lastClaimed: null,
   };
 
@@ -246,9 +247,22 @@
   $("#btn-log-clear").addEventListener("click", () => { $("#log").innerHTML = ""; });
 
   /* ---------- Campaigns ---------- */
+  // would the miner actually go after this campaign (with the default filters)?
+  function isMining(c) {
+    const st = S.settings;
+    if (c.status_key !== "active" || !c.eligible || c.sub_only || c.finished) return false;
+    if (!st) return true;
+    const priorityOnly = st.priority_mode === "PRIORITY_ONLY";
+    return (!st.exclude.includes(c.game) && !priorityOnly) || st.priority.includes(c.game);
+  }
   function campaignVisible(c) {
     const st = S.settings;
     const f = S.filters;
+    if (S.campView === "all") {
+      if (c.status_key !== "active" && c.status_key !== "upcoming") return false;
+      const q = $("#campaign-search").value.trim().toLowerCase();
+      return !q || `${c.game} ${c.name}`.toLowerCase().includes(q);
+    }
     if (c.sub_only) return false;
     if (!(f.not_linked || c.eligible)) return false;
     const statusOk = c.status_key === "active"
@@ -280,9 +294,12 @@
 
   function campaignHtml(c) {
     const statusClass = { active: "green", upcoming: "yellow", expired: "red" }[c.status_key] || "";
-    const linkTag = c.eligible
-      ? '<span class="tag green">Vinculada</span>'
-      : `<span class="tag red link" data-url="${esc(c.link_url)}" title="Clique para vincular">Não vinculada ↗</span>`;
+    const linkTag = c.sub_only
+      ? '<span class="tag">Só sub</span>'
+      : c.eligible
+        ? '<span class="tag green">Vinculada</span>'
+        : `<span class="tag red link" data-url="${esc(c.link_url)}" title="Clique para vincular">Não vinculada ↗</span>`;
+    const miningTag = S.campView === "all" && isMining(c) ? '<span class="tag green">Minerando</span>' : "";
     const channels = c.channels.length
       ? (c.channels.length <= 3 ? c.channels.join(", ") : `${c.channels.slice(0, 3).join(", ")} +${c.channels.length - 3}`)
       : "Todos os canais";
@@ -293,7 +310,7 @@
         <div class="campaign-game" title="${esc(c.game)}">${esc(c.game)}</div>
         <div class="campaign-name" title="${esc(c.name)}">${esc(c.name)}</div>
         <div class="tags">
-          <span class="tag ${statusClass}">${esc(c.status)}</span>
+          ${miningTag}<span class="tag ${statusClass}">${esc(c.status)}</span>
           ${linkTag}
           <span class="tag">${c.claimed}/${c.total} drops</span>
         </div>
@@ -312,6 +329,7 @@
     const list = Array.from(S.campaigns.values()).filter(campaignVisible);
     const order = { active: 0, upcoming: 1, expired: 2 };
     list.sort((a, b) => (order[a.status_key] - order[b.status_key])
+      || (Number(isMining(b)) - Number(isMining(a)))
       || (Number(b.eligible) - Number(a.eligible)) || a.game.localeCompare(b.game));
     $("#campaign-grid").innerHTML = list.map(campaignHtml).join("");
     $("#campaigns-empty").classList.toggle("hidden", list.length > 0);
@@ -332,6 +350,14 @@
     });
   });
   $("#campaign-search").addEventListener("input", scheduleCampaigns);
+  $("#camp-views").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-view]");
+    if (!b || b.dataset.view === S.campView) return;
+    S.campView = b.dataset.view;
+    $$("#camp-views button").forEach((x) => x.classList.toggle("on", x === b));
+    $("#filters").classList.toggle("hidden", S.campView === "all");
+    renderCampaigns();
+  });
 
   /* ---------- Channels ---------- */
   function renderChannels() {

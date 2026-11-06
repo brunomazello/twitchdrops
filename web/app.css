@@ -229,6 +229,10 @@ b { font-weight: 600; }
 .chip:hover { color: var(--text); }
 .chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
 
+.views { display: inline-flex; gap: 3px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+.views button { appearance: none; border: 0; background: none; color: var(--text-2); font: 600 13px var(--font, inherit); font-family: inherit; padding: 6px 14px; border-radius: 7px; cursor: pointer; }
+.views button:hover { color: var(--text); }
+.views button.on { background: var(--accent); color: #fff; }
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 .toolbar-right { display: flex; gap: 8px; align-items: center; }
 
