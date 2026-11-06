@@ -315,4 +315,4 @@ def qr_svg(data: str) -> str:
     """QR code as an inline SVG string (dark modules, transparent background)."""
     import segno
     qr = segno.make(data, error="m")
-    return qr.svg_inline(scale=5, border=2, dark="#0e0e10", light="#ffffff")
+    return qr.svg_inline(scale=5, border=2, dark="#0e0e10", light="#ffffff", omitsize=True)
