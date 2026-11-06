@@ -42,6 +42,11 @@ to_add: list[tuple[Path, str, bool]] = [
     (Path("icons/idle.ico"), "./icons", True),
     (Path("icons/error.ico"), "./icons", True),
     (Path("icons/maint.ico"), "./icons", True),
+    # modern web-based interface
+    (Path("web/index.html"), "./web", True),
+    (Path("web/app.css"), "./web", True),
+    (Path("web/app.js"), "./web", True),
+    (Path("web/mobile.html"), "./web", True),
     # SeleniumWire HTTPS/SSL cert file and key
     (Path(SITE_PACKAGES_PATH, "seleniumwire/ca.crt"), "./seleniumwire", False),
     (Path(SITE_PACKAGES_PATH, "seleniumwire/ca.key"), "./seleniumwire", False),
@@ -62,6 +67,11 @@ hooksconfig: dict[str, Any] = {}
 binaries: list[tuple[Path, str]] = []
 hiddenimports: list[str] = [
     "PIL._tkinter_finder",
+    "webview",
+    "webview.platforms.edgechromium",
+    "webview.platforms.winforms",
+    "clr",
+    "segno",
     "setuptools._distutils.log",
     "setuptools._distutils.dir_util",
     "setuptools._distutils.file_util",
@@ -134,6 +144,7 @@ try:
         optimize=optimize,
         exclude_binaries=one_dir,
         icon="icons/pickaxe.ico",
+        version="version_info.txt" if sys.platform == "win32" else None,
     )
 except PermissionError as exc:
     exc_text: str = format_exc()

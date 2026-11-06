@@ -135,6 +135,13 @@ if __name__ == "__main__":
     del root, parser
 
     # client run
+    import threading
+    import webview
+    from gui import JsApi, web_path, set_title_bar_dark
+    from constants import WINDOW_TITLE
+
+    exit_code: list[int] = [0]
+
     async def main():
         # set language
         try:
@@ -159,10 +166,7 @@ if __name__ == "__main__":
 
         exit_status = 0
         client = Twitch(settings)
-        loop = asyncio.get_running_loop()
-        if sys.platform == "linux":
-            loop.add_signal_handler(signal.SIGINT, lambda *_: client.gui.close())
-            loop.add_signal_handler(signal.SIGTERM, lambda *_: client.gui.close())
+        _client_ref.append(client)
         try:
             await client.run()
         except CaptchaRequired:
@@ -175,9 +179,6 @@ if __name__ == "__main__":
             client.print("Fatal error encountered:\n")
             client.print(traceback.format_exc())
         finally:
-            if sys.platform == "linux":
-                loop.remove_signal_handler(signal.SIGINT)
-                loop.remove_signal_handler(signal.SIGTERM)
             client.print(_("gui", "status", "exiting"))
             await client.shutdown()
         if not client.gui.close_requested:
@@ -192,9 +193,39 @@ if __name__ == "__main__":
         # NOTE: we have to do it after wait_until_closed,
         # because the user can alter some settings between app termination and closing the window
         client.save(force=True)
+        # give the GUI a moment to flush the last updates
+        await asyncio.sleep(0.2)
         client.gui.stop()
         client.gui.close_window()
-        sys.exit(exit_status)
+        exit_code[0] = exit_status
+
+    _client_ref: list[Twitch] = []
+    _closing_allowed = threading.Event()
+
+    def miner_thread():
+        try:
+            asyncio.run(main())
+        except BaseException:
+            traceback.print_exc()
+        finally:
+            _closing_allowed.set()
+            for window in list(webview.windows):
+                try:
+                    window.destroy()
+                except Exception:
+                    pass
+
+    def on_closing() -> bool:
+        # X button: ask the miner to shut down gracefully instead of killing the window
+        if _closing_allowed.is_set() or not _client_ref:
+            return True
+        client = _client_ref[0]
+        loop = client.gui._loop
+        loop.call_soon_threadsafe(client.gui.close)
+        return False
+
+    def on_shown():
+        set_title_bar_dark(settings.dark_mode)
 
     try:
         # use lock_file to check if we're not already running
@@ -203,6 +234,34 @@ if __name__ == "__main__":
             # already running - exit
             sys.exit(3)
 
-        asyncio.run(main())
+        start_hidden = bool(settings.tray) and sys.platform != "darwin"
+        window = webview.create_window(
+            WINDOW_TITLE,
+            web_path("index.html"),
+            js_api=JsApi(),
+            width=1280,
+            height=820,
+            min_size=(900, 620),
+            hidden=start_hidden,
+            background_color="#0e0e10" if settings.dark_mode else "#f3f3f6",
+            text_select=True,
+        )
+        window.events.closing += on_closing
+        window.events.shown += on_shown
+        # persistent WebView2 data folder (a temporary one can get cleaned up mid-run)
+        webview_storage = os.path.join(
+            os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"),
+            "TwitchDropsMiner", "webview",
+        )
+        os.makedirs(webview_storage, exist_ok=True)
+        webview.start(
+            miner_thread,
+            gui="edgechromium" if sys.platform == "win32" else None,
+            icon=str(resource_path("icons/pickaxe.ico")),
+            private_mode=False,
+            storage_path=webview_storage,
+            debug=bool(os.environ.get("TDM_UI_DEBUG")),
+        )
+        sys.exit(exit_code[0])
     finally:
         file.close()

@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e0e10">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Drops Miner</title>
+<link rel="icon" href="/icon.png">
+<link rel="apple-touch-icon" href="/icon.png">
+<style>
+  :root {
+    --bg: #0e0e10; --panel: #18181b; --panel-2: #1f1f23; --panel-3: #26262c; --border: #2e2e35;
+    --text: #efeff1; --text-2: #adadb8; --text-3: #6b6b78;
+    --accent: #9146ff; --accent-2: #d5baff; --accent-soft: rgba(145,70,255,.15);
+    --green: #00f59b; --green-soft: rgba(0,245,155,.13); --yellow: #ffb319; --red: #ff4b4b;
+    --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { padding: env(safe-area-inset-top) 0 calc(72px + env(safe-area-inset-bottom)); }
+  svg { width: 20px; height: 20px; fill: currentColor; }
+  .hidden { display: none !important; }
+
+  header { position: sticky; top: 0; z-index: 5; background: rgba(14,14,16,.92); backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; border-bottom: 1px solid var(--border); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 17px; }
+  .brand img { width: 30px; height: 30px; border-radius: 8px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font: 600 11px var(--mono); text-transform: uppercase; letter-spacing: .5px;
+    padding: 5px 10px; border-radius: 99px; background: var(--panel-2); color: var(--text-2); }
+  .pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
+  .pill.active { color: var(--green); } .pill.active .dot { background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); animation: pulse 1.6s infinite; }
+  .pill.idle { color: var(--yellow); } .pill.idle .dot { background: var(--yellow); }
+  .pill.error { color: var(--red); } .pill.error .dot { background: var(--red); }
+  .pill.off { color: var(--red); } .pill.off .dot { background: var(--red); }
+
+  main { padding: 14px 14px 0; display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+  .title { font: 700 11px var(--mono); letter-spacing: .8px; text-transform: uppercase; color: var(--text-3); margin-bottom: 10px; }
+  .status { font-size: 13px; color: var(--text-2); }
+
+  .hero { position: relative; overflow: hidden; padding: 0; }
+  .hero-bg { position: absolute; inset: 0; background-size: cover; background-position: center; filter: blur(30px) saturate(1.4); opacity: .35; transform: scale(1.3); }
+  .hero-in { position: relative; padding: 14px; }
+  .hero-top { display: flex; gap: 14px; }
+  .hero-top img { width: 84px; height: 112px; object-fit: cover; border-radius: 10px; flex: none; background: var(--panel-2); }
+  .eyebrow { font: 700 11px var(--mono); color: var(--accent-2); letter-spacing: .6px; text-transform: uppercase; display: flex; gap: 6px; align-items: center; }
+  .live { width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: pulse 1.4s infinite; }
+  .game { font-size: 22px; font-weight: 800; line-height: 1.15; margin: 4px 0 2px; word-break: break-word; }
+  .camp { color: var(--text-2); font-size: 13px; }
+  .reward { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 4px 10px 4px 4px; font-weight: 600; font-size: 13px; max-width: 100%; }
+  .reward img { width: 32px; height: 32px; border-radius: 6px; object-fit: cover; }
+  .reward span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .big-pct { font-size: 44px; font-weight: 800; letter-spacing: -1px; margin-top: 14px; line-height: 1; }
+  .big-pct small { font-size: 14px; font-weight: 600; color: var(--text-2); letter-spacing: 0; margin-left: 6px; }
+  .bar { height: 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 99px; overflow: hidden; margin: 10px 0 6px; }
+  .bar div { height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, #772ce8, #9146ff, #d5baff); box-shadow: 0 0 12px rgba(145,70,255,.6); transition: width .6s; }
+  .row { display: flex; justify-content: space-between; gap: 10px; font: 12px var(--mono); color: var(--text-3); }
+  .row b { color: var(--text); }
+  .segs { display: flex; gap: 5px; height: 7px; margin: 12px 0 6px; }
+  .seg { flex: 1; border-radius: 99px; background: var(--panel-3); position: relative; overflow: hidden; }
+  .seg.claimed { background: var(--green); box-shadow: 0 0 6px rgba(0,245,155,.5); }
+  .seg.ready { background: var(--yellow); }
+  .seg.current { background: rgba(145,70,255,.3); }
+  .seg.current div { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
+  .empty { text-align: center; color: var(--text-3); padding: 26px 10px; }
+  .empty b { display: block; color: var(--text); font-size: 16px; margin-bottom: 4px; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px 6px; text-align: center; }
+  .stat b { display: block; font: 800 20px var(--mono); }
+  .stat span { font: 10px var(--mono); text-transform: uppercase; color: var(--text-3); }
+  .green { color: var(--green); }
+
+  .watch { display: flex; align-items: center; gap: 12px; }
+  .av { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #ff6b9d, var(--accent)); display: grid; place-items: center; font-weight: 800; flex: none; }
+  .watch-name { font-weight: 700; font-size: 16px; }
+  .meta { font-size: 12.5px; color: var(--text-2); display: flex; gap: 8px; align-items: center; }
+  .badge { background: var(--red); color: #fff; font: 800 10px var(--mono); padding: 1px 6px; border-radius: 4px; }
+
+  .btn { appearance: none; border: 0; font: 600 14px inherit; font-family: inherit; border-radius: 10px; padding: 12px 14px; cursor: pointer; color: var(--text); background: var(--panel-2); border: 1px solid var(--border); }
+  .btn:active { transform: scale(.98); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 12px rgba(145,70,255,.35); }
+  .btn.block { width: 100%; }
+  .btn.sm { padding: 7px 10px; font-size: 13px; }
+
+  .list { display: flex; flex-direction: column; gap: 8px; }
+  .item { display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+  .item.watching { border-color: var(--green); }
+  .item .grow { flex: 1; min-width: 0; }
+  .item .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item .sub { font-size: 12px; color: var(--text-3); }
+  .dot2 { width: 9px; height: 9px; border-radius: 50%; background: var(--text-3); flex: none; }
+  .dot2.online { background: var(--red); } .dot2.pending { background: var(--yellow); }
+  .tagw { font: 700 10px var(--mono); color: var(--green); background: var(--green-soft); padding: 2px 6px; border-radius: 4px; }
+  .pos { width: 26px; height: 26px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-2); display: grid; place-items: center; font: 700 12px var(--mono); flex: none; }
+  .icon-btn { appearance: none; border: 0; background: var(--panel-2); color: var(--text-2); width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; }
+  .icon-btn.del { color: var(--red); }
+  .add { display: flex; gap: 8px; }
+  .input { flex: 1; min-width: 0; background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 11px 12px; font: inherit; outline: none; }
+  .input:focus { border-color: var(--accent); }
+  select.input { appearance: auto; }
+
+  .camp-item img { width: 40px; height: 54px; object-fit: cover; border-radius: 6px; flex: none; }
+  .mini { height: 5px; background: var(--panel-3); border-radius: 99px; overflow: hidden; margin-top: 5px; }
+  .mini div { height: 100%; background: var(--green); }
+
+  .log { font: 11.5px/1.55 var(--mono); color: var(--text-2); max-height: 260px; overflow-y: auto; }
+  .log div { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,.03); word-break: break-word; }
+  .log .t { color: var(--text-3); margin-right: 6px; }
+  .log .c { color: var(--green); }
+
+  nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; background: rgba(24,24,27,.96); backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border); padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); }
+  nav button { flex: 1; appearance: none; border: 0; background: none; color: var(--text-3); font: 600 11px inherit; font-family: inherit;
+    display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; border-radius: 10px; }
+  nav button.on { color: #fff; background: var(--accent-soft); }
+  nav button.on svg { color: var(--accent-2); }
+
+  .toast { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 20;
+    background: var(--panel-3); border: 1px solid var(--border); padding: 10px 16px; border-radius: 12px; font-size: 13.5px; box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    animation: up .2s ease; max-width: 90vw; }
+  .offline-banner { background: rgba(255,75,75,.12); color: var(--red); border: 1px solid rgba(255,75,75,.35); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
+  .hint { font-size: 12.5px; color: var(--text-3); }
+  @keyframes pulse { 50% { opacity: .4; } }
+  @keyframes up { from { opacity: 0; transform: translate(-50%, 8px); } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><img src="/icon.png" alt="">Drops Miner</div>
+  <span class="pill" id="pill"><span class="dot"></span><span id="pill-text">…</span></span>
+</header>
+
+<main>
+  <div class="offline-banner hidden" id="offline">Sem conexão com o PC. O programa está aberto e na mesma rede Wi-Fi?</div>
+
+  <!-- HOME -->
+  <section data-tab="home">
+    <div class="status" id="status" style="margin-bottom:12px">Carregando…</div>
+
+    <div class="card hero" id="hero">
+      <div class="hero-bg" id="hero-bg"></div>
+      <div class="hero-in">
+        <div class="empty hidden" id="hero-empty"><b>Nenhum drop sendo minerado</b>Quando achar uma campanha com canal online, aparece aqui.</div>
+        <div id="hero-content" class="hidden">
+          <div class="hero-top">
+            <img id="art" alt="">
+            <div style="min-width:0">
+              <div class="eyebrow"><span class="live"></span>Minerando agora</div>
+              <div class="game" id="game">—</div>
+              <div class="camp" id="camp">—</div>
+              <div class="reward" id="reward"><img id="reward-img" alt=""><span id="reward-name"></span></div>
+            </div>
+          </div>
+          <div class="big-pct" id="pct">0%<small></small></div>
+          <div class="bar"><div id="bar"></div></div>
+          <div class="row"><span>Falta <b id="remaining">0:00:00</b></span><span id="minutes">0/0 min</span></div>
+          <div class="segs" id="segs"></div>
+          <div class="row"><span>Campanha <b id="claimed">0 de 0</b></span><span>Termina <span id="ends">—</span></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats" style="margin-top:12px">
+      <div class="stat"><b class="green" id="s-claimed">0</b><span>Resgatados</span></div>
+      <div class="stat"><b id="s-session">0:00</b><span>Sessão</span></div>
+      <div class="stat"><b id="s-online">0</b><span>Online</span></div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="title">Assistindo</div>
+      <div class="hint" id="watch-empty">Nenhum canal no momento</div>
+      <div class="watch hidden" id="watch">
+        <div class="av" id="watch-av">?</div>
+        <div style="flex:1;min-width:0">
+          <div class="watch-name" id="watch-name">—</div>
+          <div class="meta"><span class="badge">AO VIVO</span><span id="watch-meta"></span></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn block" data-goto="channels">Trocar canal</button>
+        <button class="btn block primary" id="btn-reload">Atualizar</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="title">Atividade</div>
+      <div class="log" id="log"></div>
+    </div>
+  </section>
+
+  <!-- CHANNELS -->
+  <section data-tab="channels" class="hidden">
+    <div class="hint" style="margin-bottom:10px">Toque num canal online para o PC passar a assistir ele.</div>
+    <div class="list" id="channels"></div>
+  </section>
+
+  <!-- CAMPAIGNS -->
+  <section data-tab="campaigns" class="hidden">
+    <div class="list" id="campaigns"></div>
+  </section>
+
+  <!-- PRIORITY -->
+  <section data-tab="priority" class="hidden">
+    <div class="card">
+      <div class="title">Modo de prioridade</div>
+      <select class="input" id="mode" style="width:100%"></select>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="title">Jogos prioritários</div>
+      <div class="add" style="margin-bottom:10px">
+        <input class="input" id="p-input" list="games" placeholder="Nome do jogo">
+        <button class="btn primary" id="p-add">+</button>
+      </div>
+      <div class="list" id="priority"></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="title">Jogos excluídos</div>
+      <div class="add" style="margin-bottom:10px">
+        <input class="input" id="e-input" list="games" placeholder="Nome do jogo">
+        <button class="btn primary" id="e-add">+</button>
+      </div>
+      <div class="list" id="exclude"></div>
+    </div>
+    <button class="btn block primary" id="btn-apply" style="margin-top:12px">Aplicar mudanças (recarregar)</button>
+    <datalist id="games"></datalist>
+    <p class="hint" style="text-align:center">Dica: no menu do navegador, toque em “Adicionar à tela inicial” para usar como app.</p>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="home" class="on"><svg viewBox="0 0 24 24"><path d="M4 13h7V4H4v9zm0 7h7v-5H4v5zm9 0h7v-9h-7v9zm0-16v5h7V4h-7z"/></svg>Início</button>
+  <button data-tab="channels"><svg viewBox="0 0 24 24"><path d="M21 6h-7.6l3.3-3.3-.7-.7L12 6 8 2l-.7.7L10.6 6H3a2 2 0 00-2 2v11a2 2 0 002 2h18a2 2 0 002-2V8a2 2 0 00-2-2zM9 10v7l6-3.5L9 10z"/></svg>Canais</button>
+  <button data-tab="campaigns"><svg viewBox="0 0 24 24"><path d="M20 7h-2.2A3 3 0 0012 3.8 3 3 0 006.2 7H4a1 1 0 00-1 1v3a1 1 0 001 1h1v8a1 1 0 001 1h12a1 1 0 001-1v-8h1a1 1 0 001-1V8a1 1 0 00-1-1z"/></svg>Campanhas</button>
+  <button data-tab="priority"><svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>Prioridade</button>
+</nav>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (s) => document.querySelector(s);
+  const KEY = new URLSearchParams(location.search).get("k") || "";
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const pct = (v) => `${(Math.max(0, Math.min(1, v || 0)) * 100).toFixed(1)}%`;
+  const num = (n) => (n == null ? "—" : Number(n).toLocaleString("pt-BR"));
+  const STATE = { pickaxe: "Iniciando", active: "Minerando", idle: "Ocioso", maint: "Atualizando", error: "Erro" };
+  let S = null;
+  let editing = false;
+
+  // manifest (keeps the key so the installed app opens straight in)
+  const link = document.createElement("link");
+  link.rel = "manifest"; link.href = `/manifest.json?k=${encodeURIComponent(KEY)}`;
+  document.head.appendChild(link);
+
+  function toast(text) {
+    const el = document.createElement("div");
+    el.className = "toast"; el.textContent = text;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2600);
+  }
+
+  async function act(name, ...args) {
+    try {
+      const r = await fetch(`/action?k=${encodeURIComponent(KEY)}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, args }),
+      });
+      if (!r.ok) throw new Error(r.status);
+      setTimeout(poll, 350);
+      return true;
+    } catch (e) { toast("Não foi possível falar com o PC"); return false; }
+  }
+
+  // tabs
+  function tab(name) {
+    document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("on", b.dataset.tab === name));
+    document.querySelectorAll("main section").forEach((s) => s.classList.toggle("hidden", s.dataset.tab !== name));
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => tab(b.dataset.tab)));
+  document.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => tab(b.dataset.goto)));
+
+  function render() {
+    if (!S) return;
+    const pill = $("#pill");
+    pill.className = `pill ${S.state}`;
+    $("#pill-text").textContent = STATE[S.state] || S.state;
+    $("#status").textContent = S.status || "";
+
+    const p = S.progress;
+    $("#hero-empty").classList.toggle("hidden", !!p);
+    $("#hero-content").classList.toggle("hidden", !p);
+    if (p) {
+      if ($("#art").dataset.src !== p.campaign_image) {
+        $("#art").src = p.campaign_image; $("#art").dataset.src = p.campaign_image;
+        $("#hero-bg").style.backgroundImage = `url("${p.campaign_image}")`;
+      }
+      $("#game").textContent = p.game;
+      $("#camp").textContent = p.campaign;
+      const b = p.benefits[0];
+      $("#reward").classList.toggle("hidden", !b);
+      if (b) { $("#reward-img").src = b.image; $("#reward-name").textContent = p.rewards; }
+      $("#pct").innerHTML = `${pct(p.drop_progress)}<small>do drop</small>`;
+      $("#bar").style.width = pct(p.drop_progress);
+      $("#remaining").textContent = p.drop_remaining;
+      $("#minutes").textContent = `${p.drop_minutes}/${p.drop_required} min`;
+      $("#segs").innerHTML = (p.segments || []).map((g) => `<div class="seg ${g.state}">${g.state === "current" ? `<div style="width:${pct(g.progress)}"></div>` : ""}</div>`).join("");
+      $("#claimed").textContent = `${p.claimed} de ${p.total}`;
+      $("#ends").textContent = p.ends;
+    }
+
+    $("#s-claimed").textContent = S.session_claimed || 0;
+    $("#s-online").textContent = S.online;
+
+    const w = S.watching;
+    $("#watch").classList.toggle("hidden", !w);
+    $("#watch-empty").classList.toggle("hidden", !!w);
+    if (w) {
+      $("#watch-av").textContent = (w.name[0] || "?").toUpperCase();
+      $("#watch-name").textContent = w.name;
+      $("#watch-meta").textContent = `${w.game || ""} · ${num(w.viewers)} espectadores`;
+    }
+
+    const log = $("#log");
+    log.innerHTML = (S.log || []).slice().reverse().map((l) => {
+      const m = /^(\d{1,2}:\d{2}:\d{2})\s{2}([\s\S]*)$/.exec(l);
+      const t = m ? m[1] : "", msg = (m ? m[2] : l).replace(/^(INFO|DEBUG|CALL|WARNING):\s*/, "");
+      const cls = /claim|resgat/i.test(msg) ? "c" : "";
+      return `<div class="${cls}"><span class="t">${esc(t)}</span>${esc(msg)}</div>`;
+    }).join("");
+
+    // channels
+    $("#channels").innerHTML = (S.channels || []).map((r) => `
+      <div class="item ${r.iid === S.watching_iid ? "watching" : ""}" data-iid="${esc(r.iid)}" data-online="${r.status_key === "online"}">
+        <span class="dot2 ${r.status_key}"></span>
+        <div class="grow"><div class="name">${esc(r.name)}</div><div class="sub">${esc(r.game || r.status)}${r.viewers != null ? " · " + num(r.viewers) : ""}${r.drops ? "" : " · sem drops"}</div></div>
+        ${r.iid === S.watching_iid ? '<span class="tagw">ASSISTINDO</span>' : ""}
+      </div>`).join("") || '<div class="empty">Nenhum canal ainda.</div>';
+
+    // campaigns
+    $("#campaigns").innerHTML = (S.campaigns || []).map((c) => `
+      <div class="item camp-item">
+        <img src="${esc(c.image)}" alt="">
+        <div class="grow"><div class="name">${esc(c.game)}</div><div class="sub">${esc(c.name)}</div>
+          <div class="mini"><div style="width:${pct(c.total ? c.claimed / c.total : 0)}"></div></div>
+          <div class="sub">${c.claimed}/${c.total} drops · termina ${esc(c.ends)}</div></div>
+      </div>`).join("") || '<div class="empty">Nenhuma campanha ativa para minerar.</div>';
+
+    // priority (skip while typing to avoid wiping inputs/selection)
+    if (!editing) renderPriority();
+  }
+
+  const UP = '<svg viewBox="0 0 24 24"><path d="M7.4 15.4L12 10.8l4.6 4.6L18 14l-6-6-6 6z"/></svg>';
+  const DOWN = '<svg viewBox="0 0 24 24"><path d="M7.4 8.6L12 13.2l4.6-4.6L18 10l-6 6-6-6z"/></svg>';
+  const DEL = '<svg viewBox="0 0 24 24"><path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4l5.6 5.6L5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6z"/></svg>';
+  function renderPriority() {
+    const st = S.settings || {};
+    const mode = $("#mode");
+    mode.innerHTML = (st.priority_modes || []).map((m) => `<option value="${esc(m.value)}">${esc(m.label)}</option>`).join("");
+    mode.value = st.priority_mode;
+    $("#priority").innerHTML = (st.priority || []).map((g, i) => `
+      <div class="item" data-i="${i}"><span class="pos">${i + 1}</span><div class="grow"><div class="name">${esc(g)}</div></div>
+        <button class="icon-btn" data-act="up">${UP}</button><button class="icon-btn" data-act="down">${DOWN}</button><button class="icon-btn del" data-act="del">${DEL}</button></div>`).join("")
+      || '<div class="hint">Nenhum jogo na lista.</div>';
+    $("#exclude").innerHTML = (st.exclude || []).map((g) => `
+      <div class="item" data-name="${esc(g)}"><div class="grow"><div class="name">${esc(g)}</div></div><button class="icon-btn del" data-act="del">${DEL}</button></div>`).join("")
+      || '<div class="hint">Nenhum jogo excluído.</div>';
+    $("#games").innerHTML = (st.games || []).map((g) => `<option value="${esc(g)}">`).join("");
+  }
+
+  $("#channels").addEventListener("click", (e) => {
+    const it = e.target.closest(".item[data-iid]");
+    if (!it) return;
+    if (it.dataset.iid === S.watching_iid) return toast("Já está assistindo esse canal");
+    if (it.dataset.online !== "true") return toast("Esse canal está offline");
+    act("switch_to", it.dataset.iid).then((ok) => ok && toast("Trocando de canal…"));
+  });
+  $("#priority").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-act]"); const it = e.target.closest(".item[data-i]");
+    if (!b || !it) return;
+    const i = Number(it.dataset.i);
+    if (b.dataset.act === "up") act("priority_move", i, 1);
+    if (b.dataset.act === "down") act("priority_move", i, -1);
+    if (b.dataset.act === "del") act("priority_delete", i);
+  });
+  $("#exclude").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-act]"); const it = e.target.closest(".item[data-name]");
+    if (b && it) act("exclude_delete", it.dataset.name);
+  });
+  function addFrom(input, name) {
+    const v = $(input).value.trim();
+    if (!v) return;
+    act(name, v); $(input).value = "";
+  }
+  $("#p-add").addEventListener("click", () => addFrom("#p-input", "priority_add"));
+  $("#e-add").addEventListener("click", () => addFrom("#e-input", "exclude_add"));
+  ["#p-input", "#e-input"].forEach((s) => {
+    $(s).addEventListener("focus", () => { editing = true; });
+    $(s).addEventListener("blur", () => { setTimeout(() => { editing = false; }, 300); });
+    $(s).addEventListener("keydown", (e) => { if (e.key === "Enter") addFrom(s, s === "#p-input" ? "priority_add" : "exclude_add"); });
+  });
+  $("#mode").addEventListener("change", (e) => act("priority_mode", e.target.value));
+  $("#btn-apply").addEventListener("click", () => act("reload").then((ok) => ok && toast("Recarregando campanhas…")));
+  $("#btn-reload").addEventListener("click", () => act("reload").then((ok) => ok && toast("Atualizando…")));
+
+  function tickSession() {
+    if (!S || !S.started_at) return;
+    const sec = Math.max(0, Math.floor(Date.now() / 1000 - S.started_at));
+    const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60;
+    $("#s-session").textContent = `${h}:${String(m).padStart(2, "0")}`;
+  }
+  setInterval(tickSession, 10000);
+
+  async function poll() {
+    try {
+      const r = await fetch(`/state?k=${encodeURIComponent(KEY)}`, { cache: "no-store" });
+      if (!r.ok) throw new Error(r.status);
+      S = await r.json();
+      $("#offline").classList.add("hidden");
+      render(); tickSession();
+    } catch (e) {
+      $("#offline").classList.remove("hidden");
+      const pill = $("#pill"); pill.className = "pill off"; $("#pill-text").textContent = "Offline";
+    }
+  }
+  poll();
+  setInterval(() => { if (!document.hidden) poll(); }, 3000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(); });
+})();
+</script>
+</body>
+</html>

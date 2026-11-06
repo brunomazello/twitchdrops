@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Twitch Drops Miner</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 3.5l6 6-2 2-1.2-1.2-7.6 7.6-2.8.7.7-2.8 7.6-7.6L14 7l.5-3.5z" fill="currentColor"/><path d="M3 21l4.5-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-name">Drops Miner</div>
+          <div class="brand-sub" id="version">Twitch</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-item active" data-view="dashboard">
+          <svg viewBox="0 0 24 24"><path d="M4 13h7V4H4v9zm0 7h7v-5H4v5zm9 0h7v-9h-7v9zm0-16v5h7V4h-7z"/></svg>
+          <span>Painel</span>
+        </button>
+        <button class="nav-item" data-view="campaigns">
+          <svg viewBox="0 0 24 24"><path d="M20 7h-2.2A3 3 0 0012 3.8 3 3 0 006.2 7H4a1 1 0 00-1 1v3a1 1 0 001 1h1v8a1 1 0 001 1h12a1 1 0 001-1v-8h1a1 1 0 001-1V8a1 1 0 00-1-1zm-5-2a1 1 0 110 2h-2V6a1 1 0 011-1h1zM9 5h1a1 1 0 011 1v1H9a1 1 0 110-2zm-4 4h6v1H5V9zm2 3h4v7H7v-7zm10 7h-4v-7h4v7zm2-9h-6V9h6v1z"/></svg>
+          <span>Campanhas</span>
+          <span class="nav-badge" id="nav-campaigns-count"></span>
+        </button>
+        <button class="nav-item" data-view="channels">
+          <svg viewBox="0 0 24 24"><path d="M21 6h-7.6l3.3-3.3-.7-.7L12 6 8 2l-.7.7L10.6 6H3a2 2 0 00-2 2v11a2 2 0 002 2h18a2 2 0 002-2V8a2 2 0 00-2-2zm0 13H3V8h18v11zM9 10v7l6-3.5L9 10z"/></svg>
+          <span>Canais</span>
+          <span class="nav-badge" id="nav-channels-count"></span>
+        </button>
+        <button class="nav-item" data-view="settings">
+          <svg viewBox="0 0 24 24"><path d="M19.4 13a7.6 7.6 0 000-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 00-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 00-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 000 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 001.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 001.7-1l2.5 1 2-3.5-2.1-1.6zM13 15.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z" transform="translate(-1 0)"/></svg>
+          <span>Configurações</span>
+        </button>
+        <button class="nav-item" data-view="about">
+          <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          <span>Sobre</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn btn-ghost btn-block" id="btn-tray" title="Continua minerando escondido perto do relógio">
+          <svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>
+          Esconder na bandeja
+        </button>
+        <div class="account" id="account">
+          <div class="avatar" id="account-avatar">?</div>
+          <div class="account-info">
+            <div class="account-name" id="account-name">Desconectado</div>
+            <div class="state-pill" id="state-pill"><span class="dot"></span><span id="state-text">Iniciando</span></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <header class="topbar">
+        <h1 id="view-title">Painel</h1>
+        <div class="status-line" id="status-line">
+          <span class="spinner" id="status-spinner"></span>
+          <span id="status-text">Carregando…</span>
+        </div>
+      </header>
+
+      <!-- DASHBOARD -->
+      <section class="view active" id="view-dashboard">
+        <!-- Summary bar -->
+        <div class="card summary">
+          <div class="sum-state" id="sum-state">
+            <span class="ping"><span></span></span>
+            <div><div class="sum-label">Estado</div><div class="sum-value" id="sum-state-text">INICIANDO</div></div>
+          </div>
+          <div class="sum-div"></div>
+          <div class="sum-item">
+            <div class="sum-icon purple"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/></svg></div>
+            <div><div class="sum-label">Sessão</div><div class="sum-value mono" id="sum-session">00h 00m 00s</div></div>
+          </div>
+          <div class="sum-div"></div>
+          <div class="sum-item">
+            <div class="sum-icon green"><svg viewBox="0 0 24 24"><path d="M20 7h-2.2A3 3 0 0012 3.8 3 3 0 006.2 7H4a1 1 0 00-1 1v3a1 1 0 001 1h1v8a1 1 0 001 1h12a1 1 0 001-1v-8h1a1 1 0 001-1V8a1 1 0 00-1-1z"/></svg></div>
+            <div><div class="sum-label">Resgatados (sessão)</div><div class="sum-value mono"><b class="green" id="sum-claimed">0</b> drops</div></div>
+          </div>
+          <div class="sum-div"></div>
+          <div class="sum-item">
+            <div class="sum-icon yellow"><svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg></div>
+            <div><div class="sum-label">Campanhas ativas</div><div class="sum-value mono" id="stat-campaigns">0</div></div>
+          </div>
+          <div class="sum-div"></div>
+          <div class="sum-item">
+            <div class="sum-icon red"><svg viewBox="0 0 24 24"><path d="M21 6h-7.6l3.3-3.3-.7-.7L12 6 8 2l-.7.7L10.6 6H3a2 2 0 00-2 2v11a2 2 0 002 2h18a2 2 0 002-2V8a2 2 0 00-2-2zM9 10v7l6-3.5L9 10z"/></svg></div>
+            <div><div class="sum-label">Canais online</div><div class="sum-value mono" id="stat-online">0</div></div>
+          </div>
+          <div class="sum-actions">
+            <button class="btn btn-primary btn-glow" id="btn-sync" title="Busca as campanhas e o inventário de novo">
+              <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6a6 6 0 016 6 6 6 0 01-.7 2.8l1.5 1.5A8 8 0 0012 4zm0 14a6 6 0 01-6-6c0-1 .2-2 .7-2.8L5.2 7.7A8 8 0 0012 20v3l4-4-4-4v3z"/></svg>
+              Atualizar
+            </button>
+          </div>
+        </div>
+
+        <!-- Login card -->
+        <div class="card login-card hidden" id="login-card">
+          <div class="login-icon">
+            <svg viewBox="0 0 24 24"><path d="M4.3 2L3 5.4v13.7h4.7V22h2.6l2.6-2.9h3.9L22 14V2H4.3zm15.9 11.1l-3 3.1h-4.7l-2.6 2.6v-2.6H6V3.8h14.2v9.3zM17.3 7.2v5.4h-1.8V7.2h1.8zm-4.8 0v5.4h-1.8V7.2h1.8z"/></svg>
+          </div>
+          <div class="login-body">
+            <h2>Entre com a sua conta da Twitch</h2>
+            <p id="login-desc">O login acontece numa janela do próprio programa. Sua senha não passa pelo app — ela vai direto para a Twitch.</p>
+            <div class="login-code hidden" id="login-code-wrap">
+              <span class="login-code-label">Seu código</span>
+              <span class="login-code" id="login-code">--------</span>
+            </div>
+            <div class="login-actions">
+              <button class="btn btn-primary btn-lg" id="btn-login">Entrar com a Twitch</button>
+              <button class="btn btn-ghost hidden" id="btn-login-window">Mostrar janela de login</button>
+            </div>
+            <div class="login-status" id="login-status"></div>
+          </div>
+        </div>
+
+        <div class="dash-grid">
+          <!-- Now mining -->
+          <div class="card hero" id="hero">
+            <div class="hero-empty" id="hero-empty">
+              <div class="empty-art">
+                <svg viewBox="0 0 24 24"><path d="M14.5 3.5l6 6-2 2-1.2-1.2-7.6 7.6-2.8.7.7-2.8 7.6-7.6L14 7l.5-3.5z"/></svg>
+              </div>
+              <h3>Nenhum drop sendo minerado</h3>
+              <p id="hero-empty-text">Assim que encontrar uma campanha ativa com canal online, o progresso aparece aqui.</p>
+            </div>
+            <div class="hero-content hidden" id="hero-content">
+              <div class="hero-bg" id="hero-bg"></div>
+              <div class="hero-inner">
+                <img class="hero-art" id="hero-art" alt="" referrerpolicy="no-referrer">
+                <div class="hero-info">
+                  <div class="eyebrow"><span class="live-dot"></span> Minerando agora</div>
+                  <div class="hero-game" id="hero-game">—</div>
+                  <div class="hero-campaign" id="hero-campaign">—</div>
+
+                  <div class="reward-row" id="hero-rewards"></div>
+
+                  <div class="bar-block">
+                    <div class="bar-head">
+                      <span class="bar-label">Drop atual</span>
+                      <span class="bar-value"><b id="drop-pct">0%</b> · <span id="drop-minutes">0/0 min</span></span>
+                    </div>
+                    <div class="bar big"><div class="bar-fill" id="drop-bar"></div></div>
+                    <div class="bar-foot">
+                      <span>Falta <b id="drop-remaining">0:00:00</b></span>
+                    </div>
+                  </div>
+
+                  <div class="bar-block">
+                    <div class="bar-head mono-head">
+                      <span>Campanha: <b id="camp-claimed">0 de 0</b> drops resgatados</span>
+                      <span class="green" id="camp-pct">0%</span>
+                    </div>
+                    <div class="segments" id="camp-segments"></div>
+                    <div class="bar-foot mono-head">
+                      <span>Falta <b id="camp-remaining">0:00:00</b></span>
+                      <span>Termina <span id="camp-ends">—</span></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Side column -->
+          <div class="side-col">
+            <div class="card watch-card">
+              <div class="card-title">Assistindo</div>
+              <div class="watch-empty" id="watch-empty">Nenhum canal no momento</div>
+              <div class="hidden" id="watch">
+                <div class="watch">
+                  <div class="watch-avatar" id="watch-avatar">?</div>
+                  <div class="watch-info">
+                    <div class="watch-name" id="watch-name">—</div>
+                    <div class="watch-meta"><span class="live-badge">AO VIVO</span> <span id="watch-game"></span></div>
+                  </div>
+                  <button class="btn btn-icon" id="btn-open-channel" title="Abrir canal">
+                    <svg viewBox="0 0 24 24"><path d="M14 3v2h3.6l-9.8 9.8 1.4 1.4L19 6.4V10h2V3h-7zm5 16H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7z"/></svg>
+                  </button>
+                </div>
+                <div class="chips3">
+                  <div><span>Espectadores</span><b id="watch-viewers">—</b></div>
+                  <div><span>Drops</span><b class="green" id="watch-drops">—</b></div>
+                  <div><span>Na fila</span><b id="watch-pool">0</b></div>
+                </div>
+                <button class="btn btn-ghost btn-block" id="btn-goto-channels">Trocar de canal</button>
+              </div>
+            </div>
+
+
+            <div class="card conn-card">
+              <div class="card-title">Conexão</div>
+              <div class="ws-list" id="ws-list"><span class="muted">Sem conexões</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Log -->
+        <div class="card log-card">
+          <div class="card-title-row">
+            <div class="card-title">Atividade <span class="tag-mono">LOG</span></div>
+            <div class="row-gap">
+              <label class="check"><input type="checkbox" id="log-autoscroll" checked> Rolagem automática</label>
+              <button class="btn btn-ghost btn-sm" id="btn-log-clear">Limpar</button>
+            </div>
+          </div>
+          <div class="log" id="log"></div>
+        </div>
+      </section>
+
+      <!-- CAMPAIGNS -->
+      <section class="view" id="view-campaigns">
+        <div class="toolbar">
+          <div class="chips" id="filters">
+            <button class="chip" data-filter="not_linked">Não vinculadas</button>
+            <button class="chip active" data-filter="upcoming">Em breve</button>
+            <button class="chip" data-filter="expired">Expiradas</button>
+            <button class="chip" data-filter="excluded">Excluídas</button>
+            <button class="chip" data-filter="finished">Concluídas</button>
+          </div>
+          <div class="toolbar-right">
+            <input class="input search" id="campaign-search" placeholder="Buscar jogo ou campanha…">
+          </div>
+        </div>
+        <div class="campaign-grid" id="campaign-grid"></div>
+        <div class="empty-state hidden" id="campaigns-empty">
+          <h3>Nada por aqui</h3>
+          <p>Nenhuma campanha bate com os filtros escolhidos.</p>
+        </div>
+      </section>
+
+      <!-- CHANNELS -->
+      <section class="view" id="view-channels">
+        <div class="toolbar">
+          <input class="input search" id="channel-search" placeholder="Buscar canal…">
+          <div class="toolbar-right">
+            <button class="btn btn-primary" id="btn-switch" disabled>Trocar para o selecionado</button>
+          </div>
+        </div>
+        <div class="card table-card">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Canal</th>
+                <th>Status</th>
+                <th>Jogo</th>
+                <th class="center" title="Drops ativados">Drops</th>
+                <th class="right">Espectadores</th>
+              </tr>
+            </thead>
+            <tbody id="channel-rows"></tbody>
+          </table>
+          <div class="empty-state small hidden" id="channels-empty">
+            <p>Nenhum canal sendo acompanhado ainda.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view" id="view-settings">
+        <div class="settings-grid">
+          <div class="card">
+            <div class="card-title">Geral</div>
+            <div class="setting">
+              <div><div class="setting-name">Tema escuro</div><div class="setting-desc">Visual escuro no programa inteiro</div></div>
+              <label class="switch"><input type="checkbox" data-setting="dark_mode"><span></span></label>
+            </div>
+            <div class="setting">
+              <div><div class="setting-name">Notificações do Windows</div><div class="setting-desc">Avisa quando um drop for resgatado</div></div>
+              <label class="switch"><input type="checkbox" data-setting="tray_notifications"><span></span></label>
+            </div>
+            <div class="setting">
+              <div><div class="setting-name">Iniciar com o Windows</div><div class="setting-desc">Abre sozinho quando você liga o PC</div></div>
+              <label class="switch"><input type="checkbox" data-setting="autostart"><span></span></label>
+            </div>
+            <div class="setting">
+              <div><div class="setting-name">Iniciar escondido na bandeja</div><div class="setting-desc">Abre minimizado perto do relógio</div></div>
+              <label class="switch"><input type="checkbox" data-setting="autostart_tray"><span></span></label>
+            </div>
+            <div class="setting">
+              <div><div class="setting-name">Modo de prioridade</div><div class="setting-desc">Como escolher o que minerar</div></div>
+              <select class="input select" id="priority-mode"></select>
+            </div>
+            <div class="setting">
+              <div><div class="setting-name">Idioma das mensagens</div><div class="setting-desc">Precisa reiniciar o programa</div></div>
+              <select class="input select" id="language"></select>
+            </div>
+            <div class="setting column">
+              <div><div class="setting-name">Proxy</div><div class="setting-desc">Opcional — http://usuario:senha@host:porta</div></div>
+              <input class="input" id="proxy" placeholder="http://usuario:senha@host:porta">
+            </div>
+            <div class="setting">
+              <div><div class="setting-name">Testar notificação</div><div class="setting-desc">Mostra um aviso de exemplo no Windows</div></div>
+              <button class="btn btn-ghost btn-sm" id="btn-test-notify">Testar</button>
+            </div>
+          </div>
+
+          <div class="card mobile-card">
+            <div class="card-title">Celular</div>
+            <div class="setting">
+              <div><div class="setting-name">Acesso pelo celular</div><div class="setting-desc">Veja e controle pelo celular, na mesma rede Wi-Fi</div></div>
+              <label class="switch"><input type="checkbox" data-setting="mobile_access"><span></span></label>
+            </div>
+            <div class="mobile-body hidden" id="mobile-body">
+              <div class="qr" id="mobile-qr"></div>
+              <div class="mobile-info">
+                <div class="setting-name">Aponte a câmera do celular</div>
+                <ol class="steps small">
+                  <li>Escaneie o QR code (o celular precisa estar no mesmo Wi-Fi).</li>
+                  <li>No navegador do celular, toque em “Adicionar à tela inicial” para virar um app.</li>
+                </ol>
+                <div class="mobile-url" id="mobile-url"></div>
+                <button class="btn btn-ghost btn-sm" id="btn-mobile-token" title="Quem tinha o link antigo perde o acesso">Gerar novo link</button>
+              </div>
+            </div>
+            <div class="setting-desc warn hidden" id="mobile-error"></div>
+            <p class="card-desc" style="margin:10px 0 0">Na primeira vez o Windows pode perguntar se libera o acesso à rede — escolha <b>Permitir</b> (redes privadas).</p>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Jogos prioritários</div>
+            <p class="card-desc">Os de cima são minerados primeiro.</p>
+            <div class="add-row">
+              <input class="input" id="priority-input" list="games-list" placeholder="Nome do jogo">
+              <button class="btn btn-primary" id="btn-priority-add">Adicionar</button>
+            </div>
+            <ul class="list" id="priority-list"></ul>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Jogos excluídos</div>
+            <p class="card-desc">Nunca serão minerados.</p>
+            <div class="add-row">
+              <input class="input" id="exclude-input" list="games-list" placeholder="Nome do jogo">
+              <button class="btn btn-primary" id="btn-exclude-add">Adicionar</button>
+            </div>
+            <ul class="list" id="exclude-list"></ul>
+          </div>
+
+          <div class="card">
+            <div class="card-title">Avançado</div>
+            <p class="card-desc warn">Só mexa se souber o que está fazendo.</p>
+            <div class="setting">
+              <div><div class="setting-name">Minerar emblemas e emotes</div><div class="setting-desc">Inclui drops que só dão emblema/emote</div></div>
+              <label class="switch"><input type="checkbox" data-setting="enable_badges_emotes"><span></span></label>
+            </div>
+            <div class="setting">
+              <div><div class="setting-name">Checar drops disponíveis</div><div class="setting-desc">Confere se o canal realmente tem drops</div></div>
+              <label class="switch"><input type="checkbox" data-setting="available_drops_check"><span></span></label>
+            </div>
+          </div>
+        </div>
+        <datalist id="games-list"></datalist>
+
+        <div class="apply-bar" id="apply-bar">
+          <span>Mudou as listas ou o modo de prioridade? Recarregue para aplicar.</span>
+          <button class="btn btn-primary" id="btn-reload">Recarregar agora</button>
+        </div>
+      </section>
+
+      <!-- ABOUT -->
+      <section class="view" id="view-about">
+        <div class="about-grid">
+          <div class="card">
+            <div class="card-title">Como funciona</div>
+            <p class="prose">O programa avisa a Twitch que você está assistindo a uma live, sem baixar o vídeo. Ele escolhe sozinho um canal com drops ativos, troca de canal quando a live cai e resgata os drops automaticamente quando terminam.</p>
+            <p class="prose">Para um drop contar, a conta do jogo precisa estar <b>vinculada</b> à Twitch. Campanhas não vinculadas aparecem com a etiqueta “Não vinculada” — clique nela para vincular.</p>
+          </div>
+          <div class="card">
+            <div class="card-title">Primeiros passos</div>
+            <ol class="steps">
+              <li>Entre com a sua conta da Twitch.</li>
+              <li>Vincule a conta do jogo nas campanhas que te interessam.</li>
+              <li>Em Configurações, adicione os jogos na lista de prioridade.</li>
+              <li>Clique em “Recarregar agora” para aplicar.</li>
+              <li>Pode esconder na bandeja — ele avisa quando resgatar um drop.</li>
+            </ol>
+          </div>
+          <div class="card">
+            <div class="card-title">Links</div>
+            <div class="links">
+              <button class="link-btn" data-url="https://www.twitch.tv/drops/inventory">Inventário de drops</button>
+              <button class="link-btn" data-url="https://www.twitch.tv/drops/campaigns">Todas as campanhas</button>
+              <button class="link-btn" data-url="https://github.com/DevilXD/TwitchDropsMiner">Projeto original (DevilXD)</button>
+              <button class="link-btn" data-url="https://www.buymeacoffee.com/DevilXD">Apoiar o autor original</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Conta</div>
+            <p class="prose">Sair apaga o login salvo neste PC. Na próxima vez vai pedir para entrar de novo.</p>
+            <button class="btn btn-danger" id="btn-invalidate" disabled>Sair da conta</button>
+          </div>
+        </div>
+        <p class="footnote" id="footnote"></p>
+      </section>
+
+      <footer class="statusbar">
+        <div class="sb-group">
+          <span>SESSÃO <b id="sb-session">00:00:00</b></span>
+          <span>RESGATADOS <b class="green" id="sb-claimed">0</b></span>
+          <span>CONEXÃO <b id="sb-socket">—</b></span>
+        </div>
+        <div class="sb-group">
+          <span>CANAIS <b id="sb-channels">0</b></span>
+          <span>MOTOR <b class="purple" id="sb-engine">INICIANDO</b></span>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <div class="toast-stack" id="toasts"></div>
+  <script src="app.js"></script>
+</body>
+</html>

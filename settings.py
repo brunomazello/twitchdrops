@@ -23,6 +23,9 @@ class SettingsFile(TypedDict):
     enable_badges_emotes: bool
     available_drops_check: bool
     priority_mode: PriorityMode
+    mobile_access: bool
+    mobile_token: str
+    mobile_port: int
 
 
 default_settings: SettingsFile = {
@@ -37,6 +40,9 @@ default_settings: SettingsFile = {
     "enable_badges_emotes": False,
     "available_drops_check": False,
     "priority_mode": PriorityMode.PRIORITY_ONLY,
+    "mobile_access": False,
+    "mobile_token": "",
+    "mobile_port": 8642,
 }
 
 

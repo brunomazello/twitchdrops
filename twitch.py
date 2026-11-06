@@ -121,8 +121,10 @@ class _AuthState:
         self._twitch.gui.help._invalidate_button.config(state="disabled")
 
     async def _browser_login(self) -> str:
-        import zendriver
-
+        """
+        Logs in through Twitch's own login page, shown in a native window of this app
+        (no external browser needed). The token is read from the redirect URL.
+        """
         gui_print = self._twitch.gui.print
         login_form: LoginForm = self._twitch.gui.login
         client_info: ClientInfo = self._twitch._client_type
@@ -131,68 +133,19 @@ class _AuthState:
         if client_info.CLIENT_ID != ClientType.ANDROID_APP.CLIENT_ID:
             # NOTE: The ANDROID_APP client uses "https://www.twitch.tv/" exactly
             # as the redirect URL (including the trailing slash).
-            # Other clients may use different redirect URLs instead,
-            # but this would have to be tested first. This below is a reminder to do that first.
             raise RuntimeError("Browser login has only been tested for the ANDROID_APP client")
 
+        login_url = (
+            f"https://www.twitch.tv/login?client_id={client_info.CLIENT_ID}&"
+            f"redirect_params=client_id%3D{client_info.CLIENT_ID}%26"
+            "redirect_uri%3Dhttps%253A%252F%252Fwww.twitch.tv%252F%26response_type%3Dtoken"
+        )
         while True:
-            gui_print(_("login", "browser", "startup"))
-            # login_data = await login_form.ask_login()
-            browser: zendriver.Browser | None = None
-            try:
-                browser = await zendriver.start()
-                await browser.get(
-                    f"https://www.twitch.tv/login?client_id={client_info.CLIENT_ID}&"
-                    f"redirect_params=client_id%3D{client_info.CLIENT_ID}%26"
-                    "redirect_uri%3Dhttps%253A%252F%252Fwww.twitch.tv%252F%26response_type%3Dtoken"
-                )
-                # auto login
-                # username_input = await page.select("#login-username")
-                # password_input = await page.select("#password-input")
-                # await username_input.send_keys(login_data.username)
-                # await password_input.send_keys(login_data.password)
-
-                # login_button = await page.select('[data-a-target="passport-login-button"]')
-                # await login_button.click()
-
-                # token submit button css selectors
-                # NOTE: These are old, the website could be using different selectors by now
-                # Button: "screen="two_factor" target="submit_button"
-                # Input: <input type="text" autocomplete="one-time-code" data-a-target="tw-input"
-                # inputmode="numeric" pattern="[0-9]*" value="">
-
-                # wait for the user to navigate away from the URL, indicating successful login;
-                # alternatively, they can press on the login button again
-                async def url_waiter(browser=browser):
-                    while (
-                        await browser.test_connection()
-                        and browser.main_tab is not None
-                        and not str(browser.main_tab.url).startswith(
-                            "https://www.twitch.tv/#access_token="
-                        )
-                    ):
-                        await asyncio.sleep(0.5)
-
-                gui_print(_("login", "browser", "login_to_complete"))
-                await first_to_complete([
-                    url_waiter(),
-                    coro_unless_closed(login_form.wait_for_login_press()),
-                ])
-
-                # check if the browser window is still open
-                if await browser.test_connection() and browser.main_tab is not None:
-                    match = re.search(r'#access_token=(\w+)', str(browser.main_tab.url), re.I)
-                    if match is not None:
-                        return match.group(1)
-                    gui_print(_("login", "browser", "no_token"))
-                else:
-                    gui_print(_("login", "browser", "closed_window"))
-            except FileNotFoundError:
-                gui_print(_("login", "browser", "not_found"))
-            finally:
-                if browser is not None:
-                    await browser.stop()
-                    browser = None
+            gui_print("Faça login na janela da Twitch que abriu.")
+            token = await coro_unless_closed(login_form.browser_login(login_url))
+            if token:
+                return token
+            gui_print("A janela de login foi fechada antes de terminar.")
             await coro_unless_closed(login_form.wait_for_login_press())
 
     async def _oauth_login(self) -> str:

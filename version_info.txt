@@ -1,0 +1,29 @@
+# UTF-8
+# Windows version resource for the .exe - Windows uses FileDescription as the
+# app name shown in notifications and Task Manager.
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(16, 0, 0, 0),
+    prodvers=(16, 0, 0, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo([
+      StringTable(
+        '041604B0',
+        [StringStruct('CompanyName', 'DevilXD (interface redesenhada)'),
+         StringStruct('FileDescription', 'Twitch Drops Miner'),
+         StringStruct('FileVersion', '16.0'),
+         StringStruct('InternalName', 'TwitchDropsMiner'),
+         StringStruct('OriginalFilename', 'Twitch Drops Miner.exe'),
+         StringStruct('ProductName', 'Twitch Drops Miner'),
+         StringStruct('ProductVersion', '16.0')])
+    ]),
+    VarFileInfo([VarStruct('Translation', [0x0416, 1200])])
+  ]
+)
