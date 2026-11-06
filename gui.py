@@ -866,6 +866,7 @@ class InventoryOverview:
         if drop.is_claimed and drop.id not in self._claimed_ids:
             self._claimed_ids.add(drop.id)
             self.session_claimed += 1
+            self._manager.emit("session", {"claimed": self.session_claimed}, key="session")
         self._manager.emit(
             "campaign", self._campaign_dict(campaign), key=f"campaign:{campaign.id}"
         )
@@ -1204,6 +1205,7 @@ class GUIManager:
         return {
             "title": WINDOW_TITLE,
             "started_at": self._started_at,
+            "session_claimed": self.inv.session_claimed,
             "status": self.status.snapshot(),
             "state": self.tray._icon_state,
             "ws": self.websockets.snapshot(),

@@ -525,6 +525,7 @@
       $("#footnote").textContent = `${d.title} · interface redesenhada`;
     }
     if (d.started_at) sessionStart = d.started_at * 1000;
+    sessionClaimed = d.session_claimed || 0;
     tickSession(); renderClaimed();
     S.status = d.status; S.state = d.state; S.ws = d.ws; S.login = d.login;
     S.progress = d.progress; S.channels = d.channels; S.settings = d.settings; S.help = d.help;
@@ -552,8 +553,6 @@
     campaign: (d) => {
       const prev = S.campaigns.get(d.id);
       if (prev && d.claimed > prev.claimed) {
-        sessionClaimed += d.claimed - prev.claimed;
-        renderClaimed();
         toast("Drop resgatado! 🎉", `${d.game}: ${d.claimed}/${d.total}`);
       }
       S.campaigns.set(d.id, d);
@@ -562,6 +561,7 @@
     settings: (d) => { S.settings = d; renderSettings(); },
     help: (d) => { S.help = d; renderHelp(); },
     alerts: (d) => { S.alerts = d; renderAlerts(); },
+    session: (d) => { sessionClaimed = d.claimed || 0; renderClaimed(); },
   };
 
   window.TDM = {
