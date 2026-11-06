@@ -1476,13 +1476,15 @@ class GUIManager:
         watching = next(
             (r for r in channels["rows"] if r["iid"] == channels["watching"]), None
         )
+        every = self.inv.snapshot()
         active = [
-            c for c in self.inv.snapshot()
+            c for c in every
             if c["status_key"] == "active" and c["eligible"] and not c["sub_only"]
         ]
         priority = list(self._twitch.settings.priority)
         if self._twitch.settings.priority_mode is PriorityMode.PRIORITY_ONLY:
             active = [c for c in active if c["game"] in priority]
+        mining_ids = {c["id"] for c in active}
         return {
             "status": self.status.snapshot(),
             "state": self.tray._icon_state,
@@ -1500,6 +1502,19 @@ class GUIManager:
                     "finished", "drops", "channels",
                 )}
                 for c in active
+            ],
+            # everything Twitch is running right now (or soon), for browsing
+            "all_campaigns": [
+                {
+                    **{k: c[k] for k in (
+                        "id", "name", "game", "image", "starts", "ends", "status_key",
+                        "eligible", "link_url", "sub_only", "claimed", "total", "finished",
+                        "drops", "channels",
+                    )},
+                    "mining": c["id"] in mining_ids,
+                }
+                for c in every
+                if c["status_key"] in ("active", "upcoming")
             ],
             "log": self.output.snapshot()[-40:],
             "channels": channels["rows"],

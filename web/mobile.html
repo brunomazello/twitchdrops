@@ -115,6 +115,18 @@
   .input:focus { border-color: var(--accent); }
   select.input { appearance: auto; }
 
+  .views { display: flex; gap: 4px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 11px; padding: 3px; margin-bottom: 10px; }
+  .views button { flex: 1; appearance: none; border: 0; background: none; color: var(--text-2); font: 600 13px inherit; font-family: inherit; padding: 8px 6px; border-radius: 8px; }
+  .views button.on { background: var(--accent); color: #fff; }
+  #camp-search { width: 100%; margin-bottom: 10px; }
+  .camp-count { font-size: 12px; color: var(--text-3); margin: 0 2px 8px; }
+  .ctag { display: inline-block; font: 700 10px var(--mono); padding: 2px 6px; border-radius: 4px; margin-right: 6px; vertical-align: 2px; }
+  .ctag.mining { color: var(--green); background: var(--green-soft); }
+  .ctag.link { color: var(--yellow); background: rgba(255,179,25,.14); }
+  .ctag.soon { color: var(--accent-2); background: var(--accent-soft); }
+  .ctag.sub { color: var(--text-2); background: var(--panel-3); }
+  .ctag.done { color: var(--text-3); background: var(--panel-3); }
+  .camp-link { display: inline-block; margin-bottom: 10px; color: var(--yellow); font-weight: 700; font-size: 13px; text-decoration: none; }
   .camp-item img { width: 40px; height: 54px; object-fit: cover; border-radius: 6px; flex: none; }
   .mini { height: 5px; background: var(--panel-3); border-radius: 99px; overflow: hidden; margin-top: 5px; }
   .mini div { height: 100%; background: var(--green); }
@@ -243,6 +255,12 @@
 
   <!-- CAMPAIGNS -->
   <section data-tab="campaigns" class="hidden">
+    <div class="views" id="camp-views">
+      <button data-view="mine" class="on">Minerando</button>
+      <button data-view="all">Tudo na Twitch</button>
+    </div>
+    <input class="input hidden" id="camp-search" type="search" placeholder="Buscar jogo ou campanha" autocomplete="off">
+    <div class="camp-count hidden" id="camp-count"></div>
     <div class="list" id="campaigns"></div>
   </section>
 
@@ -294,6 +312,45 @@
   let editing = false;
   const openCamps = new Set();
   const DROP_LABEL = { claimed: "Resgatado", ready: "Pronto", progress: "", locked: "" };
+  let campView = "mine";
+  function campTags(c) {
+    if (campView !== "all") return "";
+    if (c.status_key === "upcoming") return '<span class="ctag soon">EM BREVE</span>';
+    if (c.mining) return '<span class="ctag mining">MINERANDO</span>';
+    if (c.finished) return '<span class="ctag done">CONCLUÍDA</span>';
+    if (c.sub_only) return '<span class="ctag sub">SÓ SUB</span>';
+    if (!c.eligible) return '<span class="ctag link">VINCULAR CONTA</span>';
+    return "";
+  }
+  function renderCampaigns() {
+    if (!S) return;
+    const all = campView === "all";
+    let list = all ? (S.all_campaigns || []) : (S.campaigns || []);
+    const q = all ? $("#camp-search").value.trim().toLowerCase() : "";
+    if (q) list = list.filter((c) => `${c.game} ${c.name}`.toLowerCase().includes(q));
+    if (all) {
+      const rank = (c) => (c.mining ? 0 : c.status_key === "upcoming" ? 3 : c.finished ? 4 : 1);
+      list = list.slice().sort((a, b) => rank(a) - rank(b) || a.game.localeCompare(b.game));
+      const games = new Set(list.map((c) => c.game)).size;
+      $("#camp-count").textContent = `${list.length} campanha${list.length === 1 ? "" : "s"} · ${games} jogo${games === 1 ? "" : "s"}`;
+    }
+    $("#camp-search").classList.toggle("hidden", !all);
+    $("#camp-count").classList.toggle("hidden", !all);
+    const when = (c) => (c.status_key === "upcoming" ? `começa ${esc(c.starts)}` : `termina ${esc(c.ends)}`);
+    $("#campaigns").innerHTML = list.map((c) => `
+      <div class="item camp-item ${openCamps.has(c.id) ? "open" : ""}" data-cid="${esc(c.id)}">
+        <img src="${esc(c.image)}" alt="" referrerpolicy="no-referrer">
+        <div class="grow"><div class="name">${campTags(c)}${esc(c.game)}</div><div class="sub">${esc(c.name)}</div>
+          <div class="mini"><div style="width:${pct(c.total ? c.claimed / c.total : 0)}"></div></div>
+          <div class="sub">${c.claimed}/${c.total} drops · ${when(c)}</div></div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M7.4 8.6L12 13.2l4.6-4.6L18 10l-6 6-6-6z"/></svg>
+        <div class="camp-drops">
+          ${all && !c.eligible && !c.sub_only && c.link_url ? `<a class="camp-link" href="${esc(c.link_url)}" target="_blank" rel="noopener">Vincular conta do jogo &rarr;</a>` : ""}
+          <div class="camp-ch">Canais: ${esc(chList(c.channels))}</div>
+          <div class="dgrid">${(c.drops || []).map(dropCell).join("")}</div>
+        </div>
+      </div>`).join("") || `<div class="empty">${q ? "Nada encontrado." : all ? "A Twitch não tem campanhas agora." : "Nenhuma campanha ativa para minerar."}</div>`;
+  }
   function chList(list) {
     if (!list || !list.length) return "todos";
     return list.length <= 4 ? list.join(", ") : `${list.slice(0, 4).join(", ")} +${list.length - 4}`;
@@ -413,18 +470,7 @@
       </div>`).join("") || '<div class="empty">Nenhum canal ainda.</div>';
 
     // campaigns
-    $("#campaigns").innerHTML = (S.campaigns || []).map((c) => `
-      <div class="item camp-item ${openCamps.has(c.id) ? "open" : ""}" data-cid="${esc(c.id)}">
-        <img src="${esc(c.image)}" alt="" referrerpolicy="no-referrer">
-        <div class="grow"><div class="name">${esc(c.game)}</div><div class="sub">${esc(c.name)}</div>
-          <div class="mini"><div style="width:${pct(c.total ? c.claimed / c.total : 0)}"></div></div>
-          <div class="sub">${c.claimed}/${c.total} drops · termina ${esc(c.ends)}</div></div>
-        <svg class="chev" viewBox="0 0 24 24"><path d="M7.4 8.6L12 13.2l4.6-4.6L18 10l-6 6-6-6z"/></svg>
-        <div class="camp-drops">
-          <div class="camp-ch">Canais: ${esc(chList(c.channels))}</div>
-          <div class="dgrid">${(c.drops || []).map(dropCell).join("")}</div>
-        </div>
-      </div>`).join("") || '<div class="empty">Nenhuma campanha ativa para minerar.</div>';
+    renderCampaigns();
 
     // priority (skip while typing to avoid wiping inputs/selection)
     if (!editing) renderPriority();
@@ -455,7 +501,16 @@
     if (it.dataset.online !== "true") return toast("Esse canal está offline");
     act("switch_to", it.dataset.iid).then((ok) => ok && toast("Trocando de canal…"));
   });
+  $("#camp-views").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-view]");
+    if (!b || b.dataset.view === campView) return;
+    campView = b.dataset.view;
+    document.querySelectorAll("#camp-views button").forEach((x) => x.classList.toggle("on", x === b));
+    renderCampaigns();
+  });
+  $("#camp-search").addEventListener("input", renderCampaigns);
   $("#campaigns").addEventListener("click", (e) => {
+    if (e.target.closest("a")) return;
     const item = e.target.closest(".camp-item");
     if (!item) return;
     const id = item.dataset.cid;
