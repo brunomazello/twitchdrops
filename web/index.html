@@ -340,6 +340,44 @@
               </div>
             </div>
             <div class="setting-desc warn hidden" id="mobile-error"></div>
+            <div class="remote hidden" id="remote">
+              <div class="remote-head">
+                <div class="setting-name">Fora de casa <span class="tag-mono" id="ts-badge">TAILSCALE</span></div>
+                <button class="btn btn-ghost btn-sm" id="btn-ts-refresh">Verificar</button>
+              </div>
+              <!-- not installed -->
+              <div class="hidden" id="ts-missing">
+                <p class="card-desc" style="margin:6px 0 10px">Para ver e controlar pelo 4G ou em outro Wi-Fi, use o <b>Tailscale</b> (grátis). Ele cria uma conexão privada e criptografada só entre os seus aparelhos — nada fica exposto na internet.</p>
+                <ol class="steps small">
+                  <li>Instale o Tailscale neste PC e entre com a sua conta (Google, por exemplo).</li>
+                  <li>Instale o app Tailscale no celular e entre com a <b>mesma conta</b>.</li>
+                  <li>Clique em “Verificar” aqui — vai aparecer um QR code novo.</li>
+                </ol>
+                <div class="row-gap" style="margin-top:8px">
+                  <button class="btn btn-primary btn-sm" data-url="https://tailscale.com/download/windows">Baixar para Windows ↗</button>
+                  <button class="btn btn-ghost btn-sm" data-url="https://play.google.com/store/apps/details?id=com.tailscale.ipn">App para Android ↗</button>
+                </div>
+              </div>
+              <!-- installed but logged out / stopped -->
+              <p class="card-desc warn hidden" id="ts-stopped" style="margin:6px 0 0">O Tailscale está instalado, mas desconectado. Abra o Tailscale (ícone perto do relógio) e entre na sua conta.</p>
+              <!-- ready -->
+              <div class="mobile-body hidden" id="ts-ready">
+                <div class="qr" id="ts-qr"></div>
+                <div class="mobile-info">
+                  <div class="setting-name">Escaneie com o celular</div>
+                  <ol class="steps small">
+                    <li>Deixe o Tailscale ligado no celular.</li>
+                    <li>Escaneie este QR code — funciona em qualquer lugar.</li>
+                  </ol>
+                  <div class="mobile-url" id="ts-url"></div>
+                  <div class="row-gap">
+                    <button class="btn btn-ghost btn-sm" id="btn-ts-https" title="Usa o HTTPS do Tailscale - permite instalar a página como app no celular">Ativar HTTPS</button>
+                    <span class="tag green hidden" id="ts-https-on">HTTPS ATIVO</span>
+                  </div>
+                </div>
+              </div>
+              <div class="setting-desc warn hidden" id="ts-error"></div>
+            </div>
             <p class="card-desc" style="margin:10px 0 0">Na primeira vez o Windows pode perguntar se libera o acesso à rede — escolha <b>Permitir</b> (redes privadas).</p>
           </div>
 

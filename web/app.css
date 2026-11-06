@@ -597,3 +597,6 @@ b { font-weight: 600; }
 .link-row .lr-game { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .link-row .lr-name { font-size: 12px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .link-row .lr-acts { display: flex; gap: 6px; flex: none; }
+
+.remote { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.remote-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }

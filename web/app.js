@@ -404,6 +404,21 @@
     mErr.classList.toggle("hidden", !mob.error);
     mErr.textContent = mob.error || "";
     st.mobile_access = !!mob.enabled;
+    const ts = mob.tailscale || {};
+    $("#remote").classList.toggle("hidden", !mob.running);
+    $("#ts-missing").classList.toggle("hidden", !!(ts.installed || ts.url));
+    $("#ts-stopped").classList.toggle("hidden", !(ts.installed && !ts.running));
+    $("#ts-ready").classList.toggle("hidden", !ts.url);
+    $("#ts-qr").innerHTML = ts.qr || "";
+    $("#ts-url").textContent = ts.url || "";
+    $("#ts-https-on").classList.toggle("hidden", !ts.https);
+    const httpsBtn = $("#btn-ts-https");
+    httpsBtn.classList.toggle("hidden", !ts.installed);
+    httpsBtn.textContent = ts.https ? "Desativar HTTPS" : "Ativar HTTPS";
+    httpsBtn.dataset.on = ts.https ? "1" : "";
+    const tsErr = $("#ts-error");
+    tsErr.classList.toggle("hidden", !ts.error);
+    tsErr.textContent = ts.error || "";
     const mChk = document.querySelector('[data-setting="mobile_access"]');
     if (mChk) mChk.checked = !!mob.enabled;
 
@@ -465,6 +480,16 @@
     call("reload");
     $("#apply-bar").classList.remove("show");
     toast("Recarregando", "Buscando campanhas com as novas configurações.");
+  });
+  $("#btn-ts-refresh").addEventListener("click", () => { call("tailscale", "refresh"); toast("Verificando", "Procurando o Tailscale…"); });
+  $("#btn-ts-https").addEventListener("click", (e) => {
+    const on = !!e.currentTarget.dataset.on;
+    call("tailscale", on ? "https_off" : "https_on");
+    toast(on ? "Desativando HTTPS" : "Ativando HTTPS", on ? "" : "Pode levar alguns segundos na primeira vez.");
+  });
+  $("#remote").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-url]");
+    if (b) call("open_url", b.dataset.url);
   });
   $("#btn-mobile-token").addEventListener("click", () => {
     if (confirm("Gerar um link novo? O celular vai precisar escanear o QR code de novo.")) call("mobile_new_token");

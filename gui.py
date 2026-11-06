@@ -180,6 +180,9 @@ class JsApi:
     def mobile_new_token(self) -> None:
         self._run("mobile_new_token")
 
+    def tailscale(self, action: str) -> None:
+        self._run("tailscale", action)
+
     def test_notification(self) -> None:
         self._run("test_notification")
 
@@ -1174,6 +1177,8 @@ class GUIManager:
         self.help = HelpTab(self)
         self.mobile = MobileServer(twitch.settings, self.mobile_state, self.mobile_action)
         self._mobile_qr: tuple[str, str] | None = None
+        self._remote_qr: tuple[str, str] | None = None
+        self._ts_task: asyncio.Task[None] | None = None
         # logging
         self._handler = _OutputHandler(self)
         self._handler.setFormatter(OUTPUT_FORMATTER)
@@ -1292,6 +1297,8 @@ class GUIManager:
             self.help.invalidate_token()
         elif name == "minimize_to_tray":
             self.tray.minimize()
+        elif name == "tailscale":
+            self.tailscale_action(str(args[0]) if args else "refresh")
         elif name == "mobile_new_token":
             self.mobile.new_token()
             self.settings._push()
@@ -1307,10 +1314,50 @@ class GUIManager:
             if self._twitch.settings.mobile_access:
                 if await self.mobile.start():
                     self.print(f"Acesso pelo celular ativo: {self.mobile.url}")
+                    await self.mobile.tailscale.refresh(self.mobile.port, force=True)
+                    if self._ts_task is None or self._ts_task.done():
+                        self._ts_task = asyncio.create_task(self._tailscale_loop())
             else:
                 await self.mobile.stop()
+                if self._ts_task is not None:
+                    self._ts_task.cancel()
+                    self._ts_task = None
             self.settings._push()
         asyncio.ensure_future(apply())
+
+    async def _tailscale_loop(self) -> None:
+        # keeps the away-from-home address current (Tailscale can be started/stopped anytime)
+        while True:
+            await asyncio.sleep(30)
+            before = self.mobile.remote_url
+            await self.mobile.tailscale.refresh(self.mobile.port)
+            if self.mobile.remote_url != before:
+                self.settings._push()
+
+    def tailscale_action(self, action: str) -> None:
+        async def run():
+            ts = self.mobile.tailscale
+            if action == "https_on":
+                if await ts.enable_https(self.mobile.port):
+                    self.print(f"HTTPS ativo pelo Tailscale: {self.mobile.remote_url}")
+            elif action == "https_off":
+                await ts.disable_https()
+                await ts.refresh(self.mobile.port, force=True)
+            else:
+                await ts.refresh(self.mobile.port, force=True)
+            self.settings._push()
+        asyncio.ensure_future(run())
+
+    def _qr_for(self, cache_attr: str, url: str) -> str:
+        cached = getattr(self, cache_attr)
+        if cached is None or cached[0] != url:
+            try:
+                cached = (url, qr_svg(url))
+            except Exception:
+                logger.exception("QR code generation failed")
+                cached = (url, "")
+            setattr(self, cache_attr, cached)
+        return cached[1]
 
     def mobile_info(self) -> dict[str, Any]:
         info: dict[str, Any] = {
@@ -1320,16 +1367,24 @@ class GUIManager:
             "url": "",
             "qr": "",
         }
+        ts = self.mobile.tailscale
+        info["tailscale"] = {
+            "installed": ts.installed,
+            "running": ts.running,
+            "https": ts.https,
+            "dns_name": ts.dns_name,
+            "error": ts.error,
+            "url": "",
+            "qr": "",
+        }
         if self.mobile.running:
             url = self.mobile.url
-            if self._mobile_qr is None or self._mobile_qr[0] != url:
-                try:
-                    self._mobile_qr = (url, qr_svg(url))
-                except Exception:
-                    logger.exception("QR code generation failed")
-                    self._mobile_qr = (url, "")
             info["url"] = url
-            info["qr"] = self._mobile_qr[1]
+            info["qr"] = self._qr_for("_mobile_qr", url)
+            remote = self.mobile.remote_url
+            if remote:
+                info["tailscale"]["url"] = remote
+                info["tailscale"]["qr"] = self._qr_for("_remote_qr", remote)
         return info
 
     def mobile_action(self, name: str, args: list[Any]) -> None:

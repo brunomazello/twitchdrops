@@ -10,9 +10,17 @@ The page can be "installed" on the phone's home screen (PWA) to look and feel li
 """
 from __future__ import annotations
 
+import os
+import sys
+import json
+import time
 import socket
+import shutil
+import asyncio
 import secrets
 import logging
+import ipaddress
+import subprocess
 from typing import Any, Callable, TYPE_CHECKING
 
 from aiohttp import web
@@ -39,6 +47,125 @@ def local_ip() -> str:
         sock.close()
 
 
+# Tailscale's address range (CGNAT 100.64.0.0/10)
+_TAILSCALE_NET = ipaddress.ip_network("100.64.0.0/10")
+
+
+def _tailscale_exe() -> str | None:
+    found = shutil.which("tailscale")
+    if found:
+        return found
+    for base in (os.environ.get("ProgramFiles"), os.environ.get("ProgramFiles(x86)")):
+        if base:
+            candidate = os.path.join(base, "Tailscale", "tailscale.exe")
+            if os.path.isfile(candidate):
+                return candidate
+    return None
+
+
+async def _run_tailscale(*args: str, timeout: float = 8) -> tuple[int, str]:
+    exe = _tailscale_exe()
+    if exe is None:
+        return (-1, "")
+    kwargs: dict[str, Any] = {}
+    if sys.platform == "win32":
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            exe, *args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            **kwargs,
+        )
+        out, _ = await asyncio.wait_for(proc.communicate(), timeout)
+        return (proc.returncode or 0, out.decode("utf8", "replace"))
+    except Exception as exc:
+        return (-1, str(exc))
+
+
+class Tailscale:
+    """
+    Detects Tailscale (a free private network between your own devices), so the phone
+    page can be reached away from home without exposing anything to the internet.
+    """
+    CACHE_SECONDS = 20
+
+    def __init__(self) -> None:
+        self.installed: bool = False
+        self.running: bool = False
+        self.ip: str = ""
+        self.dns_name: str = ""
+        self.https: bool = False
+        self.error: str | None = None
+        self._checked_at: float = 0
+
+    def _fallback_ip(self) -> str:
+        try:
+            for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+                addr = info[4][0]
+                if ipaddress.ip_address(addr) in _TAILSCALE_NET:
+                    return addr
+        except OSError:
+            pass
+        return ""
+
+    async def refresh(self, port: int, *, force: bool = False) -> None:
+        if not force and time.monotonic() - self._checked_at < self.CACHE_SECONDS:
+            return
+        self._checked_at = time.monotonic()
+        self.installed = _tailscale_exe() is not None
+        self.running = False
+        self.ip = ""
+        self.dns_name = ""
+        self.https = False
+        if not self.installed:
+            self.ip = self._fallback_ip()
+            self.running = bool(self.ip)
+            return
+        code, out = await _run_tailscale("status", "--json")
+        if code == 0:
+            try:
+                status = json.loads(out)
+                self.running = status.get("BackendState") == "Running"
+                me = status.get("Self") or {}
+                ips = [ip for ip in me.get("TailscaleIPs") or [] if "." in ip]
+                self.ip = ips[0] if ips else ""
+                self.dns_name = str(me.get("DNSName") or "").rstrip(".")
+            except (ValueError, AttributeError):
+                pass
+        if not self.ip:
+            self.ip = self._fallback_ip()
+        # is "tailscale serve" forwarding HTTPS to our port?
+        if self.running and self.dns_name:
+            code, out = await _run_tailscale("serve", "status", "--json")
+            if code == 0 and out.strip():
+                self.https = f"127.0.0.1:{port}" in out or f"localhost:{port}" in out
+
+    async def enable_https(self, port: int) -> bool:
+        code, out = await _run_tailscale(
+            "serve", "--bg", "--https=443", f"http://127.0.0.1:{port}", timeout=20
+        )
+        if code != 0:
+            text = out.strip()
+            if "HTTPS" in text and ("disabled" in text.lower() or "enable" in text.lower()):
+                self.error = (
+                    "O HTTPS está desligado na sua conta do Tailscale. Abra "
+                    "login.tailscale.com/admin/dns, ative \"HTTPS Certificates\" e tente de novo."
+                )
+            else:
+                self.error = f"Não foi possível ativar o HTTPS: {text[:300] or code}"
+            logger.error(self.error)
+            await self.refresh(port, force=True)
+            return False
+        self.error = None
+        await self.refresh(port, force=True)
+        return True
+
+    async def disable_https(self) -> None:
+        await _run_tailscale("serve", "--https=443", "off", timeout=15)
+        self._checked_at = 0
+
+
 class MobileServer:
     # actions the phone is allowed to trigger
     ALLOWED_ACTIONS = {
@@ -56,6 +183,7 @@ class MobileServer:
         self._get_state = get_state
         self._on_action = on_action
         self._icon_png: bytes | None = None
+        self.tailscale = Tailscale()
         self._runner: web.AppRunner | None = None
         self.error: str | None = None
         if not settings.mobile_token:
@@ -73,6 +201,17 @@ class MobileServer:
     @property
     def url(self) -> str:
         return f"http://{local_ip()}:{self.port}/?k={self._settings.mobile_token}"
+
+    @property
+    def remote_url(self) -> str:
+        """Away-from-home address (through Tailscale), or an empty string."""
+        ts = self.tailscale
+        key = self._settings.mobile_token
+        if ts.https and ts.dns_name:
+            return f"https://{ts.dns_name}/?k={key}"
+        if ts.ip:
+            return f"http://{ts.ip}:{self.port}/?k={key}"
+        return ""
 
     def _authorized(self, request: web.Request) -> bool:
         key = request.query.get("k", "")
