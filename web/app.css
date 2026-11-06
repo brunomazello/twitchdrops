@@ -45,6 +45,7 @@
   --shadow: 0 4px 16px rgba(20, 20, 40, .06);
   --green: #00a866;
   --yellow: #c98a00;
+  --accent-2: #6d28d9;
 }
 
 * { box-sizing: border-box; }

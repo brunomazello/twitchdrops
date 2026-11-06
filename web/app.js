@@ -442,7 +442,7 @@
   $("#priority-mode").addEventListener("change", (e) => { call("set_setting", "priority_mode", e.target.value); markDirty(); });
   $("#language").addEventListener("change", (e) => {
     call("set_setting", "language", e.target.value);
-    toast("Idioma alterado", "Reinicie o programa para aplicar.");
+    toast("Idioma alterado", "As próximas mensagens do registro já saem nesse idioma.");
   });
   $("#proxy").addEventListener("change", (e) => call("set_proxy", e.target.value));
 
@@ -578,6 +578,7 @@
     tickSession(); renderClaimed();
     S.status = d.status; S.state = d.state; S.ws = d.ws; S.login = d.login;
     S.progress = d.progress; S.channels = d.channels; S.settings = d.settings; S.help = d.help;
+    if (d.settings) setTheme(d.settings.dark_mode ? "dark" : "light");
     S.campaigns = new Map((d.inventory || []).map((c) => [c.id, c]));
     S.alerts = d.alerts || [];
     renderAlerts();

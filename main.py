@@ -332,6 +332,27 @@ if __name__ == "__main__":
             "TwitchDropsMiner", "webview",
         )
         os.makedirs(webview_storage, exist_ok=True)
+        # the interface is served from the same local address on every run, so WebView2
+        # would keep showing cached files from the previous version after an update:
+        # drop its HTTP cache whenever the version changes (and always when running from source)
+        from version import __app_version__
+        import shutil
+        marker = os.path.join(webview_storage, "ui-version.txt")
+        try:
+            with open(marker, encoding="utf8") as f:
+                cached_version = f.read().strip()
+        except OSError:
+            cached_version = ""
+        if cached_version != __app_version__ or not getattr(sys, "frozen", False):
+            for sub in ("Cache", "Code Cache", "Service Worker"):
+                shutil.rmtree(
+                    os.path.join(webview_storage, "EBWebView", "Default", sub), ignore_errors=True
+                )
+            try:
+                with open(marker, "w", encoding="utf8") as f:
+                    f.write(__app_version__)
+            except OSError:
+                pass
         webview.start(
             miner_thread,
             gui="edgechromium" if sys.platform == "win32" else None,

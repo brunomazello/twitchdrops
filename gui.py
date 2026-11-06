@@ -951,6 +951,11 @@ class SettingsPanel:
             setattr(self._settings, name, bool(value))
         elif name == "language" and value in _.languages:
             self._settings.language = value
+            # apply right away: new log and status messages use the new language
+            try:
+                _.set_language(value)
+            except Exception:
+                logger.debug("Couldn't switch language", exc_info=True)
         elif name == "priority_mode":
             for mode in self.priority_modes():
                 if mode.name == value:
@@ -1506,6 +1511,7 @@ class GUIManager:
             "started_at": self._started_at,
             "session_claimed": self.inv.session_claimed,
             "alerts": self.inv.link_alerts(),
+            "dark_mode": bool(self._twitch.settings.dark_mode),
         }
 
     # API used by the miner (same as the old Tk GUI)
