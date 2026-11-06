@@ -353,12 +353,20 @@ if __name__ == "__main__":
                     f.write(__app_version__)
             except OSError:
                 pass
+        # serve the interface from a fresh local port on every run: with a fixed port
+        # (pywebview's default when not in private mode) WebView2 can keep showing cached
+        # files from the previous version after an update
+        import socket
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.bind(("127.0.0.1", 0))
+            ui_port = sock.getsockname()[1]
         webview.start(
             miner_thread,
             gui="edgechromium" if sys.platform == "win32" else None,
             icon=str(resource_path("icons/pickaxe.ico")),
             private_mode=False,
             storage_path=webview_storage,
+            http_port=ui_port,
             debug=bool(os.environ.get("TDM_UI_DEBUG")),
         )
         sys.exit(exit_code[0])
